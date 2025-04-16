@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Угадай мелодию — Старт</title>
+    <link rel="stylesheet" href="index.css" />
+    <script defer src="index.js"></script>
+</head>
+<body>
+<main id="start-screen">
+    <div class="left-block">
+        <h1>Начни уже сейчас</h1>
+    </div>
+    <div class="right-block">
+        <input type="text" id="nickname" placeholder="Свой ник" />
+        <div id="main-buttons">
+            <button onclick="goToRoom(true)">Создать комнату</button>
+            <button onclick="showInvite()">Войти</button>
+        </div>
+
+        <div id="invite-section" class="hidden">
+            <input type="text" id="invite-code" placeholder="Введи инвайт код" />
+            <button onclick="goToRoom(false)">Войти в комнату</button>
+        </div>
+    </div>
+</main>
+</body>
+</html>
