@@ -16,12 +16,13 @@
         <input type="text" id="nickname" placeholder="Свой ник" />
         <div id="main-buttons">
             <button onclick="goToRoom(true)">Создать комнату</button>
-            <button onclick="showInvite()">Войти</button>
+            <button onclick="showInvite()">Войти по коду</button>
         </div>
 
         <div id="invite-section" class="hidden">
             <input type="text" id="invite-code" placeholder="Введи инвайт код" />
             <button onclick="goToRoom(false)">Войти в комнату</button>
+            <button onclick="goToRoom(true)">Нет, я всё-таки хочу создать свою комнату</button>
         </div>
     </div>
 </main>

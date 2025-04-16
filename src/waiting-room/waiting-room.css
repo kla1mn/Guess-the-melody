@@ -1,0 +1,190 @@
+/* Основные стили */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #d8c6e0;
+    background-image: linear-gradient(90deg, #5b5fc7 33.33%, #d8c6e0 33.33%, #d8c6e0 66.66%, #5b5fc7 66.66%);
+    background-size: 30px 100%;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Стили для экрана комнаты */
+#waiting-room-screen {
+    background-color: #7a82d0;
+    border-radius: 20px;
+    padding: 30px;
+    width: 80%;
+    max-width: 800px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+h1 {
+    color: white;
+    font-size: 2.5rem;
+    margin-bottom: 30px;
+}
+
+/* Информация о комнате */
+.room-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.room-code {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 8px 15px;
+    border-radius: 10px;
+    color: white;
+}
+
+#room-code-display {
+    font-weight: bold;
+    margin: 0 10px;
+    letter-spacing: 2px;
+}
+
+#copy-code {
+    background-color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+#host-controls button {
+    background-color: #ff5c5c;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#host-controls button:hover {
+    background-color: #ff3c3c;
+}
+
+/* Контейнер игроков */
+.players-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.player {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    padding: 15px;
+    text-align: center;
+    color: white;
+}
+
+.player-avatar {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 10px;
+    background-color: #f0f0f0;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.player-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+}
+
+.player-status {
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-icon {
+    margin-right: 5px;
+    font-weight: bold;
+}
+
+/* Действия в комнате */
+.room-actions {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.playlist-section, .share-section {
+    display: flex;
+    gap: 10px;
+}
+
+input[type="text"] {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    flex-grow: 1;
+}
+
+button {
+    background-color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #f0f0f0;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    #waiting-room-screen {
+        width: 90%;
+        padding: 20px;
+    }
+
+    .room-info {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .room-actions {
+        flex-direction: column;
+    }
+
+    .playlist-section, .share-section {
+        width: 100%;
+    }
+}
+
+/* Аватары игроков */
+.avatar-1 { background-color: #ff9e9e; }
+.avatar-2 { background-color: #9effb1; }
+.avatar-3 { background-color: #9ebbff; }
+.avatar-4 { background-color: #ffe89e; }
+.avatar-5 { background-color: #d89eff; }
