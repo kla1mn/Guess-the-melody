@@ -8,23 +8,31 @@
     <script defer src="index.js"></script>
 </head>
 <body>
+<div class="logo">LST</div>
+
 <main id="start-screen">
     <div class="left-block">
         <h1>Начни уже сейчас</h1>
     </div>
     <div class="right-block">
-        <input type="text" id="nickname" placeholder="Свой ник" />
-        <div id="main-buttons">
-            <button onclick="goToRoom(true)">Создать комнату</button>
-            <button onclick="showInvite()">Войти по коду</button>
-        </div>
+        <div class="form-container">
+            <input type="text" id="nickname" placeholder="Свой ник" />
 
-        <div id="invite-section" class="hidden">
-            <input type="text" id="invite-code" placeholder="Введи инвайт код" />
-            <button onclick="goToRoom(false)">Войти в комнату</button>
-            <button onclick="goToRoom(true)">Нет, я всё-таки хочу создать свою комнату</button>
+            <div id="main-buttons">
+                <button id="btn-create">Создать комнату</button>
+                <button id="btn-invite">Войти по коду</button>
+            </div>
+
+            <div id="invite-section" class="hidden">
+                <input type="text" id="invite-code" placeholder="Введи инвайт код" />
+                <button id="btn-connect">Войти</button>
+                <button id="btn-back">Назад</button>
+            </div>
         </div>
     </div>
 </main>
+
+<!-- Виниловая пластинка -->
+<div class="vinyl-record"></div>
 </body>
 </html>
