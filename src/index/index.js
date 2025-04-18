@@ -1,4 +1,4 @@
-const IP = '<ip_addr>';
+const IP = 'localhost:8000';
 
 function showInvite() {
     document.getElementById('invite-section').classList.remove('hidden');
@@ -11,7 +11,7 @@ function hideInvite() {
 }
 
 async function createGame(nickname) {
-    const url = `http://${IP}/game_app/create_game/${encodeURIComponent(nickname)}/`;
+    const url = `http://${IP}/game_app/create_game/${encodeURIComponent(nickname)}`;
     const res = await fetch(url, {
         method: 'GET',
         credentials: 'include'
@@ -41,7 +41,7 @@ async function getToken(nickname, inviteCode) {
 }
 
 function redirectToGame(inviteCode) {
-    window.location.href = `waiting-room.html?invite_code=${encodeURIComponent(inviteCode)}`;
+    window.location.href = `http://localhost:8000/src/waiting-room/waiting-room.html?invite_code=${encodeURIComponent(inviteCode)}`;
 }
 
 function init() {

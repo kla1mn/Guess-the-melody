@@ -1,3 +1,4 @@
+<!-- waiting-room.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -5,52 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Угадай мелодию — Комната ожидания</title>
     <link rel="stylesheet" href="waiting-room.css" />
-    <script defer src="waiting-room.js"></script>
 </head>
 <body>
-<main id="waiting-room-screen">
-    <h1>Ваша комната</h1>
+<div class="waiting-room">
+    <h2>Комната ожидания</h2>
 
-    <div class="room-info">
-        <div class="room-code">
-            <span>Код комнаты: </span>
-            <span id="room-code-display">XXXX</span>
-            <button id="copy-code" onclick="copyRoomCode()">Копировать</button>
-        </div>
-        <div id="host-controls" class="hidden">
-            <button id="start-game" onclick="startGame()">Начать игру</button>
-        </div>
+    <!-- добавление ссылки -->
+    <div class="add-link">
+        <input type="text" id="playlist-link" placeholder="Ссылка на плейлист альбома" />
+        <button id="btn-add-link">Добавить</button>
     </div>
 
-    <div class="players-container" id="players-container">
-        <!-- Игроки будут добавлены динамически -->
-    </div>
+    <!-- список добавленных ссылок -->
+    <ul id="link-list"></ul>
 
-    <div class="room-actions">
-        <div class="playlist-section">
-            <input type="text" id="playlist-link" placeholder="Ссылка на плейлист" />
-            <button onclick="addPlaylist()">Добавить</button>
-        </div>
-        <div class="share-section">
-            <button onclick="shareRoom()">Поделиться</button>
-            <button onclick="generateQR()">QR</button>
-            <button onclick="copyGameLink()">Ссылка на игру</button>
-        </div>
-    </div>
-</main>
+    <!-- кнопка старта (видна только хосту) -->
+    <button id="btn-start" class="hidden">Начать игру</button>
+</div>
 
-<!-- Шаблон для игрока -->
-<template id="player-template">
-    <div class="player">
-        <div class="player-avatar">
-            <!-- Здесь будет аватар игрока -->
-        </div>
-        <div class="player-name"></div>
-        <div class="player-status">
-            <span class="status-icon">✓</span>
-            <span class="status-text">Плейлист загружен</span>
-        </div>
-    </div>
-</template>
+<script src="waiting-room.js"></script>
 </body>
 </html>
