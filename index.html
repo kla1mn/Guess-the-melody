@@ -1,0 +1,37 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Угадай Мелодию</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- Начальный экран -->
+<div class="container" id="init-screen">
+    <h1>Угадай Мелодию</h1>
+    <input type="text" id="init-nickname-input" placeholder="Свой ник">
+    <button id="create-btn">Создать комнату</button>
+    <button id="join-menu-btn">Войти по коду</button>
+</div>
+
+<!-- Экран входа в комнату -->
+<div class="container hidden" id="join-screen">
+    <h1>Войти в комнату</h1>
+    <input type="text" id="join-nickname-input" placeholder="Свой ник">
+    <input type="text" id="join-invite-input" placeholder="Введи инвайт код">
+    <button id="enter-btn">Войти</button>
+    <button id="back-btn">Назад</button>
+</div>
+
+<!-- Экран ожидания -->
+<div class="container hidden" id="waiting-screen">
+    <h2>Комната: <span id="room-code"></span></h2>
+    <p>Ожидаем других игроков...</p>
+    <button id="leave-btn">Выйти</button>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
