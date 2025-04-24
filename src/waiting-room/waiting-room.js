@@ -1,8 +1,8 @@
 // waiting-room.js
-const IP        = 'localhost:8000';  // <-- замените на ваш адрес
+const IP        = '158.160.169.76:8000';
 const WS_PROTO  = location.protocol === 'https:' ? 'wss' : 'ws';
 const WS_URL    = `${WS_PROTO}://${IP}/game_app/ws`;
-let   socket    = null;
+let socket    = null;
 
 // Парсим параметры из URL
 const params   = new URLSearchParams(window.location.search);
@@ -38,7 +38,7 @@ btnAdd.addEventListener('click', async () => {
     try {
         // HTTP-запрос к бэку
         await getWithToken(
-            `http://${IP}/game_app/add_link/${encodeURIComponent(link)}`
+            `http://${IP}/game_app/add_link/${encodeURIComponent(link)}/`
         );
         // опционально: уведомим других через WS
         socket.send(JSON.stringify({
