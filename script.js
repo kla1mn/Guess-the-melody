@@ -1,28 +1,46 @@
-const BACKEND = 'http://localhost:8000';
-const WS_BACKEND = 'ws://localhost:8000/game_app/ws';
+// script.js
 
-const initScreen = document.getElementById('init-screen');
-const joinScreen = document.getElementById('join-screen');
-const waitingScreen = document.getElementById('waiting-screen');
+const BACKEND    = 'http://158.160.169.76:8000';
+const WS_BACKEND = 'ws://158.160.169.76:8000/ws/game/';
 
-const initNickInput = document.getElementById('init-nickname-input');
-const joinNickInput = document.getElementById('join-nickname-input');
+// Элементы UI
+const initScreen      = document.getElementById('init-screen');
+const joinScreen      = document.getElementById('join-screen');
+const waitingScreen   = document.getElementById('waiting-screen');
+
+const initNickInput   = document.getElementById('init-nickname-input');
+const joinNickInput   = document.getElementById('join-nickname-input');
 const joinInviteInput = document.getElementById('join-invite-input');
-const roomCodeEl = document.getElementById('room-code');
+const roomCodeEl      = document.getElementById('room-code');
 
-let ws;
+// Дополнительные элементы на экране ожидания
+const linkInput       = document.getElementById('link-input');
+const addLinkBtn      = document.getElementById('add-link-btn');
+const startBtn        = document.getElementById('start-btn');
+
+let ws = null;
 let currentNick = '';
 let currentCode = '';
+let isHost = false;
+let linkAdded = false;
 
-// Создание комнаты: create_game устанавливает куку-токен
+// --- Обработчики UI ---
+
+// Создать комнату
 document.getElementById('create-btn').addEventListener('click', async () => {
     const nick = initNickInput.value.trim();
     if (!nick) return alert('Введите никнейм');
     currentNick = nick;
+    isHost = true;
     try {
-        const res = await fetch(`${BACKEND}/game_app/create_game/${encodeURIComponent(nick)}`, { credentials: 'include' });
-        const data = await res.json();
-        currentCode = data.invite_code;
+        const res = await fetch(
+            `${BACKEND}/game_app/create_game/${encodeURIComponent(nick)}/`,
+            { credentials: 'include' }
+        );
+        if (!res.ok)
+            throw new Error(`Ошибка сети: ${res.status}`);
+        currentCode = await res.text()
+        console.log(currentCode);
         showWaiting();
     } catch (e) {
         console.error(e);
@@ -30,39 +48,53 @@ document.getElementById('create-btn').addEventListener('click', async () => {
     }
 });
 
-// Показать экран входа в комнату
+// Перейти к экрану входа по коду
 document.getElementById('join-menu-btn').addEventListener('click', () => {
     joinNickInput.value = initNickInput.value;
     initScreen.classList.add('hidden');
     joinScreen.classList.remove('hidden');
 });
 
-// Возврат к начальному экрану
+// Назад на главный экран
 document.getElementById('back-btn').addEventListener('click', () => {
     joinScreen.classList.add('hidden');
     initScreen.classList.remove('hidden');
 });
 
-// Вход по коду: get_token устанавливает куку-токен
+// Войти по коду комнаты
 document.getElementById('enter-btn').addEventListener('click', async () => {
     const nick = joinNickInput.value.trim();
     const code = joinInviteInput.value.trim();
-    if (!nick || !code) return alert('Введите ник и код комнаты');
+    if (!nick || !code) {
+        return alert('Введите ник и код комнаты');
+    }
+
     currentNick = nick;
     currentCode = code;
+    isHost = false;
+
     try {
-        await fetch(
+        const res = await fetch(
             `${BACKEND}/game_app/get_token?nickname=${encodeURIComponent(nick)}&invite_code=${encodeURIComponent(code)}`,
-            { credentials: 'include' }
+            { method: 'GET', credentials: 'include' }
         );
-        showWaiting();
+
+        if (res.ok) {
+            showWaiting();
+        } else if (res.status === 400) {
+            const errorText = await res.text();
+            alert(errorText);
+        } else {
+            alert(`Ошибка сервера: ${res.status}`);
+        }
     } catch (e) {
         console.error(e);
-        alert('Ошибка при подключении');
+        alert('Сетевая ошибка при подключении');
     }
 });
 
-// Выход из комнаты
+
+// Выйти из комнаты ожидания
 document.getElementById('leave-btn').addEventListener('click', () => {
     if (ws) ws.close();
     waitingScreen.classList.add('hidden');
@@ -70,20 +102,80 @@ document.getElementById('leave-btn').addEventListener('click', () => {
     initNickInput.value = currentNick;
 });
 
-// Показ экрана ожидания и подключение WS
+// Добавление ссылки на плейлист
+addLinkBtn.addEventListener('click', async () => {
+    if (linkAdded) {
+        return alert('Ссылка уже добавлена');
+    }
+
+    const link = linkInput.value.trim();
+    if (!link) {
+        return alert('Введите ссылку');
+    }
+
+    const yaPlaylistRe = /^https?:\/\/music\.yandex\.ru\/users\/[^\/]+\/playlists\/\d+(\?.*)?$/;
+    if (!yaPlaylistRe.test(link)) {
+        return alert('Некорректная ссылка. Пожалуйста, введите ссылку на плейлист Яндекс.Музыки.');
+    }
+
+    try {
+        const res = await fetch(
+            `${BACKEND}/game_app/add_link/${encodeURIComponent(link)}`,
+            { credentials: 'include' }
+        );
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            return alert(err?.error || `Ошибка сервера: ${res.status}`);
+        }
+
+        const data = await res.json();
+        console.log('Ссылка добавлена:', data);
+
+        linkAdded = true;
+        linkInput.disabled = true;
+        addLinkBtn.disabled = true;
+        alert('Плейлист успешно добавлен!');
+    } catch (e) {
+        console.error(e);
+        alert('Ошибка при добавлении ссылки');
+    }
+});
+
+
+// Начать игру (только хост)
+startBtn.addEventListener('click', () => {
+    if (!ws) return;
+    ws.send(JSON.stringify({ event_type: 'start_game', payload: {} }));
+});
+
+// --- Переключение экранов и WebSocket ---
+
 function showWaiting() {
-    joinScreen.classList.add('hidden');
     initScreen.classList.add('hidden');
+    joinScreen.classList.add('hidden');
     roomCodeEl.textContent = currentCode;
+    // Показать дополнительные элементы
+    linkInput.value = '';
+    linkInput.parentElement.classList.remove('hidden');
+    addLinkBtn.parentElement.classList.remove('hidden');
+    if (isHost) startBtn.classList.remove('hidden');
+    else startBtn.classList.add('hidden');
+
     waitingScreen.classList.remove('hidden');
     connectWebSocket();
 }
 
 function connectWebSocket() {
     ws = new WebSocket(WS_BACKEND);
+
     ws.addEventListener('open', () => {
-        ws.send(JSON.stringify({ event_type: 'join_room', payload: { nickname: currentNick, invite_code: currentCode } }));
+        ws.send(JSON.stringify({
+            event_type: 'join_room',
+            payload: { nickname: currentNick, invite_code: currentCode }
+        }));
     });
+
     ws.addEventListener('message', evt => {
         const { event_type, payload } = JSON.parse(evt.data);
         handleEvent(event_type, payload);
@@ -92,67 +184,41 @@ function connectWebSocket() {
     ws.addEventListener('error', e => console.error('WS ошибка', e));
 }
 
+// --- Обработка входящих WS-событий ---
 function handleEvent(type, payload) {
     switch (type) {
+        case 'user_list':
+            console.log('Игроки в комнате:', payload.users);
+            break;
+        case 'user_joined':
+            console.log('Игрок присоединился:', payload.nickname);
+            break;
+        case 'user_left':
+            console.log('Игрок вышел:', payload.nickname);
+            break;
         case 'transfer_master':
-            handleTransferMaster(payload);
+            console.log('Передача мастерства:', payload);
             break;
         case 'start_game':
-            handleStartGame(payload);
+            console.log('Игра началась:', payload);
+            // TODO: перейти к игровому экрану
             break;
         case 'pick_melody':
-            handlePickMelody(payload);
+            console.log('Выбор мелодии:', payload);
             break;
         case 'answer':
-            handleAnswer(payload);
+            console.log('Ответ:', payload);
             break;
         case 'accept_answer_partially':
-            handleAcceptAnswerPartially(payload);
+            console.log('Частично принято:', payload);
             break;
         case 'accept_answer':
-            handleAcceptAnswer(payload);
+            console.log('Принято:', payload);
             break;
         case 'reject_answer':
-            handleRejectAnswer(payload);
+            console.log('Отклонено:', payload);
             break;
         default:
             console.warn('Неизвестная команда:', type, payload);
-            ws.send(JSON.stringify({ event_type: 'unknown', payload: { message: 'Неизвестная команда' } }));
     }
-}
-
-// Handlers for server events (стаб-функции)
-function handleTransferMaster(payload) {
-    console.log('Передача прав мастерства:', payload);
-    // TODO: обновить UI, показать нового админа
-}
-
-function handleStartGame(payload) {
-    console.log('Начало игры:', payload);
-    // TODO: перейти к экрану игры
-}
-
-function handlePickMelody(payload) {
-    console.log('Выбор мелодии:', payload);
-    // TODO: отобразить варианты мелодий
-}
-
-function handleAnswer(payload) {
-    console.log('Ответ игрока:', payload);
-    // TODO: показать ответ и кнопку «Проверить»
-}
-
-function handleAcceptAnswerPartially(payload) {
-    console.log('Частичное принятие ответа:', payload);
-    // TODO: обновить счёт/статус
-}
-
-function handleAcceptAnswer(payload) {
-    console.log('Правильный ответ:', payload);
-    // TODO: обновить счёт/статус
-}
-
-function handleRejectAnswer(payload) {
-    console.log('Неправильный ответ:', payload);
-    // TODO: показать сообщение об ошибке
 }

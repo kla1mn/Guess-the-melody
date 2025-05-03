@@ -1,3 +1,4 @@
+/* styles.css */
 body {
     font-family: sans-serif;
     display: flex;
@@ -12,19 +13,40 @@ body {
 }
 
 .container {
-    width: 300px;
+    width: 320px;
     padding: 20px;
     border: 1px solid #ccc;
     border-radius: 8px;
     text-align: center;
 }
 
-input, button {
+h1, h2 {
+    margin-bottom: 16px;
+}
+
+input {
     width: 100%;
     padding: 8px;
     margin-bottom: 10px;
+    box-sizing: border-box;
 }
 
 button {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
     cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: #4a90e2;
+    color: white;
+    font-size: 14px;
+}
+
+button#leave-btn {
+    background-color: #e94e77;
+}
+
+button#start-btn {
+    background-color: #50c878;
 }
