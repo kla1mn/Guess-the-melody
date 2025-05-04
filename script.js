@@ -1,7 +1,7 @@
 // script.js
 
-const BACKEND    = 'http://158.160.169.76:8000';
-const WS_BACKEND = 'ws://158.160.169.76:8000/ws/game/';
+const BACKEND    = 'http://localhost:8000';
+const WS_BACKEND = 'ws://localhost:8000/ws/game/';
 
 // Элементы UI
 const initScreen      = document.getElementById('init-screen');
@@ -18,11 +18,33 @@ const linkInput       = document.getElementById('link-input');
 const addLinkBtn      = document.getElementById('add-link-btn');
 const startBtn        = document.getElementById('start-btn');
 
-let ws = null;
+// контейнер для списка игроков
+const playersListEl = document.getElementById('players-list');
+
+
+let socket = null;
 let currentNick = '';
 let currentCode = '';
 let isHost = false;
 let linkAdded = false;
+
+// 2) В начале файла — после объявления переменных —
+window.addEventListener('load', () => {
+    const savedCode = localStorage.getItem('guessthemelody_code');
+    const savedNick = localStorage.getItem('guessthemelody_nick');
+    const savedIsHost = localStorage.getItem('guessthemelody_isHost');
+
+    // Если есть данные — восстанавливаем состояние
+    if (savedCode && savedNick) {
+        currentCode = savedCode;
+        currentNick = savedNick;
+        isHost = savedIsHost === '1';
+
+        // Сразу показываем экран ожидания и подключаем WS
+        showWaiting();
+    }
+});
+
 
 // --- Обработчики UI ---
 
@@ -96,10 +118,15 @@ document.getElementById('enter-btn').addEventListener('click', async () => {
 
 // Выйти из комнаты ожидания
 document.getElementById('leave-btn').addEventListener('click', () => {
-    if (ws) ws.close();
+    if (socket)
+        socket.close();
     waitingScreen.classList.add('hidden');
     initScreen.classList.remove('hidden');
     initNickInput.value = currentNick;
+
+    localStorage.removeItem('guessthemelody_code');
+    localStorage.removeItem('guessthemelody_nick');
+    localStorage.removeItem('guessthemelody_isHost');
 });
 
 // Добавление ссылки на плейлист
@@ -120,8 +147,16 @@ addLinkBtn.addEventListener('click', async () => {
 
     try {
         const res = await fetch(
-            `${BACKEND}/game_app/add_link/${encodeURIComponent(link)}`,
-            { credentials: 'include' }
+            `${BACKEND}/game_app/add_link/`,
+            {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'Accept': '*/*'
+                },
+                body: link
+            }
         );
 
         if (!res.ok) {
@@ -129,7 +164,7 @@ addLinkBtn.addEventListener('click', async () => {
             return alert(err?.error || `Ошибка сервера: ${res.status}`);
         }
 
-        const data = await res.json();
+        const data = await res.text();
         console.log('Ссылка добавлена:', data);
 
         linkAdded = true;
@@ -145,8 +180,10 @@ addLinkBtn.addEventListener('click', async () => {
 
 // Начать игру (только хост)
 startBtn.addEventListener('click', () => {
-    if (!ws) return;
-    ws.send(JSON.stringify({ event_type: 'start_game', payload: {} }));
+    if (!socket)
+        return;
+    console.log('start_game')
+    socket.send(JSON.stringify({ type: 'start_game', payload: {} }));
 });
 
 // --- Переключение экранов и WebSocket ---
@@ -155,7 +192,6 @@ function showWaiting() {
     initScreen.classList.add('hidden');
     joinScreen.classList.add('hidden');
     roomCodeEl.textContent = currentCode;
-    // Показать дополнительные элементы
     linkInput.value = '';
     linkInput.parentElement.classList.remove('hidden');
     addLinkBtn.parentElement.classList.remove('hidden');
@@ -163,62 +199,92 @@ function showWaiting() {
     else startBtn.classList.add('hidden');
 
     waitingScreen.classList.remove('hidden');
+
+    localStorage.setItem('guessthemelody_code', currentCode);
+    localStorage.setItem('guessthemelody_nick', currentNick);
+    localStorage.setItem('guessthemelody_isHost', isHost ? '1' : '0');
+
     connectWebSocket();
 }
 
 function connectWebSocket() {
-    ws = new WebSocket(WS_BACKEND);
+    socket = new WebSocket(WS_BACKEND);
 
-    ws.addEventListener('open', () => {
-        ws.send(JSON.stringify({
-            event_type: 'join_room',
-            payload: { nickname: currentNick, invite_code: currentCode }
-        }));
+    socket.addEventListener('open', () => {
+        console.log('WS: connected');
     });
 
-    ws.addEventListener('message', evt => {
-        const { event_type, payload } = JSON.parse(evt.data);
+    socket.addEventListener('message', event => {
+        let msg;
+        try {
+            msg = JSON.parse(event.data);
+        } catch {
+            console.error('WS: некорректный JSON', event.data);
+            return;
+        }
+        const event_type = msg['type'];
+        const payload = msg['payload'];
         handleEvent(event_type, payload);
     });
-    ws.addEventListener('close', () => console.log('WS закрыт'));
-    ws.addEventListener('error', e => console.error('WS ошибка', e));
+
+    socket.addEventListener('close', () => console.log('WS: closed'));
+    socket.addEventListener('error', e => console.error('WS error', e));
 }
 
-// --- Обработка входящих WS-событий ---
 function handleEvent(type, payload) {
     switch (type) {
-        case 'user_list':
-            console.log('Игроки в комнате:', payload.users);
+        case 'init':
+            console.log('init');
+            currentCode = payload.invite_code;
+            currentNick = payload.current_player_nickname;
+            document.getElementById('room-code').textContent = currentCode;
+
+            renderPlayersList(payload.players);
             break;
-        case 'user_joined':
-            console.log('Игрок присоединился:', payload.nickname);
+
+        case 'new_player':
+            console.log('new_player');
+            addPlayerToList(payload.nickname, payload.is_master);
             break;
+
         case 'user_left':
-            console.log('Игрок вышел:', payload.nickname);
+            removePlayerFromList(payload.nickname);
+            break
+
+        case 'exception':
+            console.log('exception');
+            alert(payload.message);
             break;
-        case 'transfer_master':
-            console.log('Передача мастерства:', payload);
-            break;
-        case 'start_game':
-            console.log('Игра началась:', payload);
-            // TODO: перейти к игровому экрану
-            break;
-        case 'pick_melody':
-            console.log('Выбор мелодии:', payload);
-            break;
-        case 'answer':
-            console.log('Ответ:', payload);
-            break;
-        case 'accept_answer_partially':
-            console.log('Частично принято:', payload);
-            break;
-        case 'accept_answer':
-            console.log('Принято:', payload);
-            break;
-        case 'reject_answer':
-            console.log('Отклонено:', payload);
-            break;
+
         default:
-            console.warn('Неизвестная команда:', type, payload);
+            console.warn('Неизвестный ивент:', type, payload);
     }
 }
+
+
+function renderPlayersList(players) {
+    playersListEl.innerHTML = '';
+    players.forEach(p => {
+        const li = document.createElement('li');
+        li.textContent = p.nickname + (p.is_master ? ' (хост)' : '');
+        playersListEl.appendChild(li);
+    });
+}
+
+
+function addPlayerToList(nickname, isMaster = false) {
+    const li = document.createElement('li');
+    li.textContent = nickname + (isMaster ? ' (хост)' : '');
+    playersListEl.appendChild(li);
+}
+
+
+function removePlayerFromList(nickname) {
+    Array.from(playersListEl.children).forEach(li => {
+        if (li.textContent.startsWith(nickname)) {
+            playersListEl.removeChild(li);
+        }
+    });
+}
+
+
