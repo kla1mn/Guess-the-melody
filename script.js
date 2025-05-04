@@ -7,6 +7,9 @@ const WS_BACKEND = 'ws://localhost:8000/ws/game/';
 const initScreen      = document.getElementById('init-screen');
 const joinScreen      = document.getElementById('join-screen');
 const waitingScreen   = document.getElementById('waiting-screen');
+const gameScreen    = document.getElementById('game-screen');
+const categoriesCt  = document.getElementById('categories-container');
+const audioPlayer   = document.getElementById('audio-player');
 
 const initNickInput   = document.getElementById('init-nickname-input');
 const joinNickInput   = document.getElementById('join-nickname-input');
@@ -21,26 +24,22 @@ const startBtn        = document.getElementById('start-btn');
 // контейнер для списка игроков
 const playersListEl = document.getElementById('players-list');
 
-
 let socket = null;
 let currentNick = '';
 let currentCode = '';
 let isHost = false;
 let linkAdded = false;
 
-// 2) В начале файла — после объявления переменных —
 window.addEventListener('load', () => {
     const savedCode = localStorage.getItem('guessthemelody_code');
     const savedNick = localStorage.getItem('guessthemelody_nick');
     const savedIsHost = localStorage.getItem('guessthemelody_isHost');
 
-    // Если есть данные — восстанавливаем состояние
     if (savedCode && savedNick) {
         currentCode = savedCode;
         currentNick = savedNick;
         isHost = savedIsHost === '1';
 
-        // Сразу показываем экран ожидания и подключаем WS
         showWaiting();
     }
 });
@@ -184,6 +183,8 @@ startBtn.addEventListener('click', () => {
         return;
     console.log('start_game')
     socket.send(JSON.stringify({ type: 'start_game', payload: {} }));
+    waitingScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
 });
 
 // --- Переключение экранов и WebSocket ---
@@ -251,9 +252,21 @@ function handleEvent(type, payload) {
             removePlayerFromList(payload.nickname);
             break
 
+        case 'start_game':
+            console.log('start_game');
+            const categories = payload.categories;
+            const state_info = payload.state_info;
+            renderCategories(categories);
+
+            break;
+
         case 'exception':
             console.log('exception');
-            alert(payload.message);
+            if (payload.message === 'The game has already begun') {
+                alert('Потерпи, игра уже началась');
+            } else if (payload.message === '1') {
+                alert('1')
+            }
             break;
 
         default:
@@ -261,6 +274,42 @@ function handleEvent(type, payload) {
     }
 }
 
+function renderCategories(categories) {
+    categoriesCt.innerHTML = '';  // очистить предыдущее
+    categories.forEach(cat => {
+        const card = document.createElement('div');
+        card.className = 'category-card';
+        // на свой вкус можно подставить фон по имени категории
+        card.style.backgroundImage = `url('/images/${cat.category_name}.jpg')`;
+
+        const title = document.createElement('h3');
+        title.textContent = cat.category_name;
+        card.appendChild(title);
+
+        const btns = document.createElement('div');
+        btns.className = 'buttons';
+        cat.melodies.forEach(m => {
+            const btn = document.createElement('button');
+            btn.textContent = m.points;
+            btn.addEventListener('click', () => {
+                // отправляем всем ссылку на трек
+                socket.emit('play_melody', { link: m.link });
+                // сразу локально запускаем трек
+                playMelody(m.link);
+            });
+            btns.appendChild(btn);
+        });
+        card.appendChild(btns);
+
+        categoriesCt.appendChild(card);
+    });
+}
+
+function playMelody(link) {
+    audioPlayer.src = link;
+    audioPlayer.classList.remove('hidden');
+    audioPlayer.play();
+}
 
 function renderPlayersList(players) {
     playersListEl.innerHTML = '';
