@@ -1,7 +1,7 @@
 import { WS_BACKEND } from "./config.js"
-import { setSocket } from "./game-state.js"
-import { renderPlayersList, renderCategories, playMelody, addPlayerAnswer } from "./ui-renderer.js"
-import { waitingScreen, gameScreen } from "./dom-elements.js"
+import { setSocket, gameStarted, gameCategories } from "./game-state.js"
+import { renderPlayersList, playMelody, addPlayerAnswer } from "./ui-renderer.js"
+import { showGame } from "./ui-manager.js"
 
 function connectWebSocket() {
     console.log("Connecting to WebSocket...")
@@ -9,6 +9,17 @@ function connectWebSocket() {
 
     socket.addEventListener("open", () => {
         console.log("WS: connected successfully")
+
+        // Если игра уже началась, но у нас нет категорий, запросим их
+        if (gameStarted && !gameCategories) {
+            console.log("Game already started but no categories, requesting game state")
+            socket.send(
+                JSON.stringify({
+                    type: "get_game_state",
+                    payload: {},
+                }),
+            )
+        }
     })
 
     socket.addEventListener("message", (event) => {
@@ -67,11 +78,25 @@ function handleEvent(type, payload) {
     switch (type) {
         case "init":
             console.log("init")
-            import("./game-state.js").then(({ setCurrentCode, setCurrentNick }) => {
+            import("./game-state.js").then(({ setCurrentCode, setCurrentNick, gameStarted }) => {
                 setCurrentCode(payload.invite_code)
                 setCurrentNick(payload.current_player_nickname)
                 document.getElementById("room-code").textContent = payload.invite_code
                 renderPlayersList(payload.players)
+
+                // Если игра уже началась, запросим состояние игры
+                if (gameStarted) {
+                    console.log("Game already started, requesting game state")
+                    const socket = document.socket
+                    if (socket) {
+                        socket.send(
+                            JSON.stringify({
+                                type: "get_game_state",
+                                payload: {},
+                            }),
+                        )
+                    }
+                }
             })
             break
 
@@ -90,14 +115,17 @@ function handleEvent(type, payload) {
 
         case "start_game":
             console.log("start_game received with payload:", payload)
-            // Показываем игровой экран для ВСЕХ игроков, не только для хоста
-            waitingScreen.classList.add("hidden")
-            gameScreen.classList.remove("hidden")
-            console.log(payload)
 
-            // Рендерим категории
+            // Показываем игровой экран и сохраняем состояние
+            showGame(payload.categories)
+            break
+
+        case "game_state":
+            console.log("game_state received with payload:", payload)
+
+            // Обновляем состояние игры
             if (payload.categories) {
-                renderCategories(payload.categories)
+                showGame(payload.categories)
             }
             break
 
@@ -138,6 +166,19 @@ function handleEvent(type, payload) {
             console.log("exception", payload)
             if (payload.message === "The game has already begun") {
                 alert("Потерпи, игра уже началась")
+
+                // Если получили сообщение, что игра уже началась, запросим состояние игры
+                import("./game-state.js").then(({ setGameStarted, socket }) => {
+                    setGameStarted(true)
+                    if (socket) {
+                        socket.send(
+                            JSON.stringify({
+                                type: "get_game_state",
+                                payload: {},
+                            }),
+                        )
+                    }
+                })
             } else {
                 alert(`Ошибка: ${payload.message}`)
             }

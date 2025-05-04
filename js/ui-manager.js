@@ -9,8 +9,17 @@ import {
     addLinkBtn,
     startBtn,
 } from "./dom-elements.js"
-import { currentCode, currentNick, isHost, saveState, setLinkAdded } from "./game-state.js"
+import {
+    currentCode,
+    currentNick,
+    isHost,
+    saveState,
+    setLinkAdded,
+    setGameStarted,
+    setGameCategories,
+} from "./game-state.js"
 import { connectWebSocket } from "./websocket-manager.js"
+import { renderCategories } from "./ui-renderer.js"
 
 // Show waiting screen
 function showWaiting() {
@@ -30,6 +39,30 @@ function showWaiting() {
     gameScreen.classList.add("hidden") // Убедимся, что игровой экран скрыт
 
     saveState()
+    connectWebSocket()
+}
+
+// Show game screen
+function showGame(categories) {
+    console.log("Showing game screen with categories:", categories)
+
+    initScreen.classList.add("hidden")
+    joinScreen.classList.add("hidden")
+    waitingScreen.classList.add("hidden")
+    gameScreen.classList.remove("hidden")
+
+    // Устанавливаем флаг, что игра началась
+    setGameStarted(true)
+
+    // Сохраняем категории
+    setGameCategories(categories)
+
+    // Рендерим категории
+    if (categories) {
+        renderCategories(categories)
+    }
+
+    // Подключаемся к WebSocket, если еще не подключены
     connectWebSocket()
 }
 
@@ -126,11 +159,10 @@ function startGame(socket) {
     console.log("Sending start_game request")
     socket.send(
         JSON.stringify({
-            type: "start_game", // Изменено с event_type на type
+            type: "start_game",
             payload: {},
         }),
     )
-    // Не переключаем экраны здесь - это будет сделано при получении события start_game от сервера
 }
 
-export { showWaiting, addPlaylistLink, createRoom, joinRoom, startGame }
+export { showWaiting, showGame, addPlaylistLink, createRoom, joinRoom, startGame }
