@@ -6,12 +6,16 @@ const waitingScreen = document.getElementById("waiting-screen")
 const gameScreen = document.getElementById("game-screen")
 const categoriesCt = document.getElementById("categories-container")
 const audioPlayer = document.getElementById("audio-player")
+const answersContainer = document.getElementById("answers-container")
+const playOverlay = document.getElementById("play-overlay")
+const answerForm = document.getElementById("answer-form")
 
 // Inputs
 const initNickInput = document.getElementById("init-nickname-input")
 const joinNickInput = document.getElementById("join-nickname-input")
 const joinInviteInput = document.getElementById("join-invite-input")
 const roomCodeEl = document.getElementById("room-code")
+const answerInput = document.getElementById("answer-input")
 
 // Waiting screen elements
 const linkInput = document.getElementById("link-input")
@@ -28,10 +32,14 @@ export {
     gameScreen,
     categoriesCt,
     audioPlayer,
+    answersContainer,
+    playOverlay,
+    answerForm,
     initNickInput,
     joinNickInput,
     joinInviteInput,
     roomCodeEl,
+    answerInput,
     linkInput,
     addLinkBtn,
     startBtn,

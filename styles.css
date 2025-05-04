@@ -20,7 +20,8 @@ body {
     text-align: center;
 }
 
-h1, h2 {
+h1,
+h2 {
     margin-bottom: 16px;
 }
 
@@ -51,7 +52,6 @@ button#start-btn {
     background-color: #50c878;
 }
 
-
 #categories-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -75,7 +75,7 @@ button#start-btn {
 .category-card h3 {
     margin: 0;
     padding: 4px 8px;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0, 0, 0, 0.6);
     border-radius: 8px;
     align-self: center;
 }
@@ -87,10 +87,100 @@ button#start-btn {
 }
 
 .category-card .buttons button {
-    background: rgba(0,0,0,0.7);
+    background: rgba(0, 0, 0, 0.7);
     font-size: 14px;
+}
+
+/* Стили для аудио-плеера */
+#audio-player {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background-color: #f0f0f0;
+    padding: 5px;
+    border-radius: 5px;
 }
 
 #audio-player.hidden {
     display: none;
+}
+
+/* Стили для формы ответов */
+.answer-form {
+    position: fixed;
+    bottom: 60px;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.answer-form input {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    flex-grow: 1;
+    max-width: 300px;
+    margin-bottom: 0;
+}
+
+.answer-form button {
+    padding: 8px 16px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: auto;
+    margin-bottom: 0;
+}
+
+/* Стили для контейнера ответов */
+.answers-container {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.player-answer {
+    margin: 5px 0;
+}
+
+/* Стили для оверлея воспроизведения */
+.play-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.play-button {
+    padding: 15px 30px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    width: auto;
 }

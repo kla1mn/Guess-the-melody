@@ -223,9 +223,9 @@ function connectWebSocket() {
             console.error('WS: некорректный JSON', event.data);
             return;
         }
-        const event_type = msg['type'];
+        const type = msg['type'];
         const payload = msg['payload'];
-        handleEvent(event_type, payload);
+        handleEvent(type, payload);
     });
 
     socket.addEventListener('close', () => console.log('WS: closed'));

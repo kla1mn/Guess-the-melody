@@ -43,8 +43,19 @@
 <!-- Экран игры -->
 <div class="container hidden" id="game-screen">
     <div id="categories-container"></div>
-    <audio id="audio-player" controls class="hidden"></audio>
+
+    <!-- Форма для отправки ответов -->
+    <form id="answer-form" class="answer-form">
+        <input type="text" id="answer-input" placeholder="Введите ваш ответ...">
+        <button type="submit">Ответить</button>
+    </form>
+
+    <!-- Контейнер для ответов игроков -->
+    <div id="answers-container" class="answers-container hidden"></div>
 </div>
+
+<!-- Аудио плеер -->
+<audio id="audio-player" controls class="hidden"></audio>
 
 <script type="module" src="js/main.js"></script>
 </body>
