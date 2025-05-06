@@ -1,32 +1,17 @@
 import { WS_BACKEND } from "./config.js"
-import {
-    setSocket,
-    gameStarted,
-    gameCategories,
-    resetAnsweredPlayers,
-    updatePlayerScore,
-    currentAudioPlayer,
-} from "./game-state.js"
+import { setSocket, resetAnsweredPlayers, updatePlayerScore, currentAudioPlayer } from "./game-state.js"
 import { renderPlayersList, playMelody, updateScoreDisplay, clearAnswersContainer } from "./ui-renderer.js"
 import { showGame } from "./ui-manager.js"
 
+let socket // Declare socket here
+
 function connectWebSocket() {
     console.log("Connecting to WebSocket...")
-    const socket = new WebSocket(WS_BACKEND)
+    socket = new WebSocket(WS_BACKEND)
 
     socket.addEventListener("open", () => {
         console.log("WS: connected successfully")
 
-        // Если игра уже началась, но у нас нет категорий, запросим их
-        if (gameStarted && !gameCategories) {
-            console.log("Game already started but no categories, requesting game state")
-            socket.send(
-                JSON.stringify({
-                    type: "get_game_state",
-                    payload: {},
-                }),
-            )
-        }
     })
 
     socket.addEventListener("message", (event) => {
@@ -39,32 +24,23 @@ function connectWebSocket() {
             return
         }
 
-        // Проверяем структуру сообщения
         console.log("Received raw message:", msg)
 
-        // Адаптируем к разным форматам сообщений
         let eventType, payload
 
         if (msg.type && msg.payload) {
-            // Формат: { type: "...", payload: {...} }
             eventType = msg.type
-            payload = msg.payload
-        } else if (msg.event_type && msg.payload) {
-            // Формат: { event_type: "...", payload: {...} }
-            eventType = msg.event_type
             payload = msg.payload
         } else {
             console.error("Неизвестный формат сообщения:", msg)
             return
         }
 
-        console.log("Processed event:", eventType, payload)
         handleEvent(eventType, payload)
     })
 
     socket.addEventListener("close", (event) => {
         console.log("WS: closed", event)
-        // Пытаемся переподключиться через 2 секунды
         setTimeout(() => {
             console.log("WS: attempting to reconnect...")
             connectWebSocket()
@@ -94,6 +70,7 @@ function handleEvent(type, payload) {
                      setChoosingPlayerId,
                      setCurrentAnswer,
                      setCurrentPlayerId,
+                     setGameStarted,
                  }) => {
                     setCurrentCode(payload.invite_code)
                     setCurrentNick(payload.current_player_nickname)
@@ -118,23 +95,26 @@ function handleEvent(type, payload) {
                         if (payload.state_info.answer) {
                             setCurrentAnswer(payload.state_info.answer)
                         }
-                    }
 
-                    // Если игра уже началась, запросим состояние игры
-                    if (gameStarted) {
-                        console.log("Game already started, requesting game state")
-                        const socket = document.socket
-                        if (socket) {
-                            socket.send(
-                                JSON.stringify({
-                                    type: "get_game_state",
-                                    payload: {},
-                                }),
-                            )
+                        // Если игра уже началась, устанавливаем флаг
+                        if (payload.state_info.game_started) {
+                            setGameStarted(true)
                         }
                     }
                 },
             )
+            break
+
+        // Обработчик для получения состояния игры
+        case "game_state":
+            console.log("game_state received:", payload)
+            if (payload.categories) {
+                import("./game-state.js").then(({ gameStarted }) => {
+                    if (gameStarted) {
+                        showGame(payload.categories)
+                    }
+                })
+            }
             break
 
         case "new_player":
@@ -205,7 +185,6 @@ function handleEvent(type, payload) {
 
             // Сбрасываем список ответивших игроков для нового раунда
             resetAnsweredPlayers()
-
             // Очищаем контейнер ответов
             clearAnswersContainer()
 
@@ -222,7 +201,6 @@ function handleEvent(type, payload) {
                 // Только хост автоматически воспроизводит мелодию
                 import("./game-state.js").then(({ isHost, currentNick, isChoosingPlayer }) => {
                     if (isHost) {
-                        // Хост воспроизводит мелодию
                         playMelody(payload.link, payload.start_time, payload.end_time)
                     } else if (!isChoosingPlayer()) {
                         // Для остальных игроков (кроме выбирающего) показываем кнопку "Ответить"
@@ -245,22 +223,79 @@ function handleEvent(type, payload) {
 
         // Обработчик события answer
         case "answer":
-            console.log("answer", payload)
+            console.log("answer event received with full payload:", payload)
+
             // Отображение ответа игрока
-            if (payload.nickname && payload.answer) {
-                // Добавляем ответ в интерфейс
-                import("./ui-renderer.js").then(({ addPlayerAnswer }) => {
-                    import("./game-state.js").then(({ isHost, addPlayerToAnswered, currentAnswer }) => {
+            if (payload.answering_player_nickname && payload.answer) {
+                // Останавливаем воспроизведение музыки, если это хост
+                import("./game-state.js").then(({ isHost, currentAudioPlayer }) => {
+                    if (isHost && currentAudioPlayer) {
+                        currentAudioPlayer.pause()
+
+                        // Показываем уведомление о полученном ответе
+                        const notification = document.createElement("div")
+                        notification.className = "answer-notification"
+                        notification.textContent = `Получен ответ от ${payload.answering_player_nickname}!`
+                        notification.style.position = "fixed"
+                        notification.style.top = "50%"
+                        notification.style.left = "50%"
+                        notification.style.transform = "translate(-50%, -50%)"
+                        notification.style.backgroundColor = "rgba(76, 175, 80, 0.9)"
+                        notification.style.color = "white"
+                        notification.style.padding = "20px"
+                        notification.style.borderRadius = "10px"
+                        notification.style.zIndex = "1000"
+                        notification.style.fontWeight = "bold"
+                        notification.style.fontSize = "24px"
+                        notification.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)"
+                        document.body.appendChild(notification)
+
+                        // Удаляем уведомление через 2 секунды
+                        setTimeout(() => {
+                            notification.style.opacity = "0"
+                            notification.style.transition = "opacity 0.5s"
+                            setTimeout(() => notification.remove(), 500)
+                        }, 2000)
+                    }
+                })
+
+                // Добавляем ответ в интерфейс немедленно
+                import("./ui-renderer.js").then(({ addPlayerAnswer, showAnswersContainer }) => {
+                    import("./game-state.js").then(({ addPlayerToAnswered }) => {
+                        // Добавляем игрока в список ответивших
+                        addPlayerToAnswered(payload.answering_player_nickname)
+
+                        // Показываем контейнер ответов
+                        showAnswersContainer()
+
+                        // Добавляем ответ в интерфейс
+                        console.log(
+                            "Calling addPlayerAnswer with:",
+                            payload.answering_player_nickname,
+                            payload.answer,
+                            payload.melody_name,
+                        )
+                        addPlayerAnswer(payload.answering_player_nickname, payload.answer, payload.melody_name)
+                    })
+                })
+            } else if (payload.nickname && payload.answer) {
+                // Альтернативный формат данных
+                import("./ui-renderer.js").then(({ addPlayerAnswer, showAnswersContainer }) => {
+                    import("./game-state.js").then(({ addPlayerToAnswered, currentAnswer }) => {
                         // Добавляем игрока в список ответивших
                         addPlayerToAnswered(payload.nickname)
 
-                        // Добавляем ответ в интерфейс
-                        addPlayerAnswer(payload.nickname, payload.answer, currentAnswer)
+                        // Показываем контейнер ответов
+                        showAnswersContainer()
 
-                        // Если текущий игрок - хост, показываем кнопки для оценки ответа
-                        if (isHost) {
-                            // Кнопки для оценки ответа добавляются в функции addPlayerAnswer
-                        }
+                        // Добавляем ответ в интерфейс
+                        console.log(
+                            "Calling addPlayerAnswer with alternative format:",
+                            payload.nickname,
+                            payload.answer,
+                            currentAnswer,
+                        )
+                        addPlayerAnswer(payload.nickname, payload.answer, currentAnswer)
                     })
                 })
             }
@@ -365,19 +400,6 @@ function handleEvent(type, payload) {
             console.log("exception", payload)
             if (payload.message === "The game has already begun") {
                 alert("Потерпи, игра уже началась")
-
-                // Если получили сообщение, что игра уже началась, запросим состояние игры
-                import("./game-state.js").then(({ setGameStarted, socket }) => {
-                    setGameStarted(true)
-                    if (socket) {
-                        socket.send(
-                            JSON.stringify({
-                                type: "get_game_state",
-                                payload: {},
-                            }),
-                        )
-                    }
-                })
             } else {
                 alert(`Ошибка: ${payload.message}`)
             }

@@ -22,7 +22,6 @@ import {
     currentPlayerId,
 } from "./game-state.js"
 import { showWaiting, addPlaylistLink, createRoom, joinRoom } from "./ui-manager.js"
-import { addPlayerAnswer } from "./ui-renderer.js"
 
 // Setup all event handlers
 function setupEventHandlers() {
@@ -118,31 +117,41 @@ function setupEventHandlers() {
 
     // Обработчик кастомного события "answer"
     answerForm?.addEventListener("answer", () => {
-        const answer = answerInput.value.trim()
-        if (!answer) return
+        // Проверяем, что текущий игрок не хост
+        import("./game-state.js").then(({ isHost }) => {
+            if (isHost) {
+                console.log("Host cannot answer")
+                return
+            }
 
-        if (socket) {
-            socket.send(
-                JSON.stringify({
-                    type: "answer",
-                    payload: {
-                        answer: answer,
-                        nickname: currentNick,
-                        id: currentPlayerId,
-                    },
-                }),
-            )
-            console.log("Sent answer:", answer)
+            const answer = answerInput.value.trim()
+            if (!answer) return
 
-            // Добавляем свой ответ в контейнер
-            addPlayerAnswer(currentNick, answer)
+            if (socket) {
+                socket.send(
+                    JSON.stringify({
+                        type: "answer",
+                        payload: {
+                            answer: answer,
+                            nickname: currentNick,
+                            id: currentPlayerId,
+                        },
+                    }),
+                )
+                console.log("Sent answer:", answer)
 
-            // Очищаем поле ввода
-            answerInput.value = ""
+                // Добавляем свой ответ в контейнер
+                import("./ui-renderer.js").then(({ addPlayerAnswer }) => {
+                    addPlayerAnswer(currentNick, answer)
+                })
 
-            // Скрываем форму ответа после отправки
-            answerForm.classList.add("hidden")
-        }
+                // Очищаем поле ввода
+                answerInput.value = ""
+
+                // Скрываем форму ответа после отправки
+                answerForm.classList.add("hidden")
+            }
+        })
     })
 }
 

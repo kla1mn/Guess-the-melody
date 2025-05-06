@@ -218,23 +218,25 @@ function playMelody(link, startTime, endTime) {
         }, duration * 1000)
     }
 
-    // Показываем интерфейс для ответов
-    showAnswerInterface()
+    // Показываем интерфейс для ответов только для не-хоста
+    if (!isHost) {
+        showAnswerInterface()
+    }
 
-    // Создаем кнопку для воспроизведения (всегда показываем её)
+    // Создаем кнопку для воспроизведения в менее заметном месте
     const playButton = document.createElement("button")
-    playButton.textContent = "▶️ Воспроизвести мелодию"
+    playButton.textContent = "▶️ Играть"
     playButton.style.position = "fixed"
-    playButton.style.bottom = "10px"
+    playButton.style.top = "10px"
     playButton.style.right = "10px"
     playButton.style.zIndex = "1000"
-    playButton.style.padding = "10px 15px"
+    playButton.style.padding = "5px 10px"
     playButton.style.backgroundColor = "#4CAF50"
     playButton.style.color = "white"
     playButton.style.border = "none"
     playButton.style.borderRadius = "5px"
     playButton.style.cursor = "pointer"
-    playButton.style.fontWeight = "bold"
+    playButton.style.fontSize = "12px"
     playButton.id = "play-melody-button"
 
     // Удаляем существующую кнопку, если она есть
@@ -265,8 +267,8 @@ function playMelody(link, startTime, endTime) {
 
 // Показать интерфейс для ответов
 function showAnswerInterface() {
-    // Если текущий игрок - выбирающий или уже ответил, не показываем форму ответа
-    if (isChoosingPlayer() || hasPlayerAnswered()) {
+    // Если текущий игрок - выбирающий или уже ответил или хост, не показываем форму ответа
+    if (isChoosingPlayer() || hasPlayerAnswered() || isHost) {
         return
     }
 
@@ -292,11 +294,17 @@ function showAnswersContainer() {
     }
 }
 
-// Обновляем функцию addPlayerAnswer для добавления кнопок оценки
+// Обновляем функцию addPlayerAnswer для добавления кнопок оценки и улучшения отображения
 function addPlayerAnswer(nickname, answer, correctAnswer) {
-    const answersContainer = document.getElementById("answers-container")
-    if (!answersContainer) return
+    console.log("Adding player answer to UI:", nickname, answer, correctAnswer)
 
+    const answersContainer = document.getElementById("answers-container")
+    if (!answersContainer) {
+        console.error("Answers container not found")
+        return
+    }
+
+    // Показываем контейнер ответов
     showAnswersContainer()
 
     // Добавляем игрока в список ответивших
@@ -307,23 +315,55 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
         hideAnswerInterface()
     }
 
+    // Удаляем предыдущий ответ от этого игрока, если он есть
+    const existingAnswers = answersContainer.querySelectorAll(".player-answer")
+    existingAnswers.forEach((el) => {
+        if (el.dataset.player === nickname) {
+            el.remove()
+        }
+    })
+
     // Создаем элемент ответа
     const answerElement = document.createElement("div")
     answerElement.className = "player-answer"
-    answerElement.textContent = `${nickname}: ${answer}`
+    answerElement.dataset.player = nickname
 
-    // Если текущий игрок - хост, добавляем кнопки для оценки ответа
+    // Добавляем анимацию появления
+    answerElement.style.animation = "fadeIn 0.5s"
+
+    // Если это хост, делаем ответ более заметным
     if (isHost) {
-        const buttonsContainer = document.createElement("div")
-        buttonsContainer.className = "answer-buttons"
+        answerElement.classList.add("host-view")
+    }
 
+    // Создаем элемент для имени игрока
+    const nameElement = document.createElement("span")
+    nameElement.className = "player-name"
+    nameElement.textContent = nickname + ": "
+
+    // Создаем элемент для текста ответа
+    const answerTextElement = document.createElement("span")
+    answerTextElement.className = "answer-text"
+    answerTextElement.textContent = answer
+
+    answerElement.appendChild(nameElement)
+    answerElement.appendChild(answerTextElement)
+
+    // Если текущий игрок - хост, добавляем кнопки для оценки ответа и показываем правильный ответ
+    if (isHost) {
         // Показываем правильный ответ для хоста
         if (correctAnswer) {
             const correctAnswerEl = document.createElement("div")
             correctAnswerEl.className = "correct-answer"
             correctAnswerEl.textContent = `Правильный ответ: ${correctAnswer}`
+            correctAnswerEl.style.fontWeight = "bold"
+            correctAnswerEl.style.color = "#FFD700"
+            correctAnswerEl.style.marginTop = "5px"
             answerElement.appendChild(correctAnswerEl)
         }
+
+        const buttonsContainer = document.createElement("div")
+        buttonsContainer.className = "answer-buttons"
 
         // Кнопка "Принять ответ"
         const acceptButton = document.createElement("button")
@@ -334,15 +374,14 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
             if (socket) {
                 socket.send(
                     JSON.stringify({
-                        type: "accept_answer", // Используем type вместо event_type
-                        payload: {
-                            nickname: nickname,
-                        },
+                        type: "accept_answer",
+                        payload: {},
                     }),
                 )
             }
-            // Удаляем кнопки после нажатия
             buttonsContainer.remove()
+
+            answerElement.classList.add("accepted-answer")
         }
 
         // Кнопка "Частично принять ответ"
@@ -354,15 +393,14 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
             if (socket) {
                 socket.send(
                     JSON.stringify({
-                        type: "accept_answer_partially", // Используем type вместо event_type
-                        payload: {
-                            nickname: nickname,
-                        },
+                        type: "accept_answer_partially",
+                        payload: {},
                     }),
                 )
             }
-            // Удаляем кнопки после нажатия
             buttonsContainer.remove()
+
+            answerElement.classList.add("partially-accepted-answer")
         }
 
         // Кнопка "Отклонить ответ"
@@ -374,15 +412,16 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
             if (socket) {
                 socket.send(
                     JSON.stringify({
-                        type: "reject_answer", // Используем type вместо event_type
-                        payload: {
-                            nickname: nickname,
-                        },
+                        type: "reject_answer",
+                        payload: {},
                     }),
                 )
             }
             // Удаляем кнопки после нажатия
             buttonsContainer.remove()
+
+            // Добавляем класс для визуального отображения отклоненного ответа
+            answerElement.classList.add("rejected-answer")
         }
 
         buttonsContainer.appendChild(acceptButton)
@@ -393,6 +432,9 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
     }
 
     answersContainer.appendChild(answerElement)
+
+    // Прокручиваем контейнер ответов вниз, чтобы показать новый ответ
+    answersContainer.scrollTop = answersContainer.scrollHeight
 }
 
 // Обновить счет игрока в интерфейсе

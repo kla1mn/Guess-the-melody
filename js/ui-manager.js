@@ -62,6 +62,22 @@ function showGame(categories) {
         renderCategories(categories)
     }
 
+    // Если текущий игрок - хост, скрываем форму ответа
+    import("./game-state.js").then(({ isHost }) => {
+        if (isHost) {
+            const answerForm = document.getElementById("answer-form")
+            if (answerForm) {
+                answerForm.classList.add("hidden")
+            }
+
+            // Показываем контейнер ответов для хоста сразу
+            const answersContainer = document.getElementById("answers-container")
+            if (answersContainer) {
+                answersContainer.classList.remove("hidden")
+            }
+        }
+    })
+
     // Подключаемся к WebSocket, если еще не подключены
     connectWebSocket()
 }
