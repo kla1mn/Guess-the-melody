@@ -159,7 +159,7 @@ function startGame(socket) {
     console.log("Sending start_game request")
     socket.send(
         JSON.stringify({
-            type: "start_game",
+            type: "start_game", // Используем type вместо event_type
             payload: {},
         }),
     )

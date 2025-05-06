@@ -11,8 +11,17 @@ import {
     answerForm,
     answerInput,
 } from "./dom-elements.js"
-import { currentNick, setCurrentNick, setCurrentCode, setIsHost, socket, clearState, linkAdded } from "./game-state.js"
-import { showWaiting, addPlaylistLink, createRoom, joinRoom, startGame } from "./ui-manager.js"
+import {
+    currentNick,
+    setCurrentNick,
+    setCurrentCode,
+    setIsHost,
+    socket,
+    clearState,
+    linkAdded,
+    currentPlayerId,
+} from "./game-state.js"
+import { showWaiting, addPlaylistLink, createRoom, joinRoom } from "./ui-manager.js"
 import { addPlayerAnswer } from "./ui-renderer.js"
 
 // Setup all event handlers
@@ -83,23 +92,43 @@ function setupEventHandlers() {
         await addPlaylistLink(link)
     })
 
+    // Обновляем обработчик кнопки старта игры
     // Start game button (host only)
     startBtn?.addEventListener("click", () => {
-        startGame(socket)
+        if (socket) {
+            console.log("Sending start_game request")
+            socket.send(
+                JSON.stringify({
+                    type: "start_game",
+                    payload: {},
+                }),
+            )
+        }
     })
 
-    // Форма для отправки ответов
+    // Добавляем обработчик стандартного события submit, чтобы предотвратить перезагрузку страницы
     answerForm?.addEventListener("submit", (e) => {
-        e.preventDefault()
+        e.preventDefault() // Предотвращаем стандартное поведение формы
+        console.log("Form submit prevented")
+
+        // Создаем и диспатчим кастомное событие "answer"
+        const answerEvent = new Event("answer")
+        answerForm.dispatchEvent(answerEvent)
+    })
+
+    // Обработчик кастомного события "answer"
+    answerForm?.addEventListener("answer", () => {
         const answer = answerInput.value.trim()
         if (!answer) return
 
         if (socket) {
             socket.send(
                 JSON.stringify({
-                    type: "answer", // Изменено с event_type на type
+                    type: "answer",
                     payload: {
                         answer: answer,
+                        nickname: currentNick,
+                        id: currentPlayerId,
                     },
                 }),
             )
@@ -110,6 +139,9 @@ function setupEventHandlers() {
 
             // Очищаем поле ввода
             answerInput.value = ""
+
+            // Скрываем форму ответа после отправки
+            answerForm.classList.add("hidden")
         }
     })
 }

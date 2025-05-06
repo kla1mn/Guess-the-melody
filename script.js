@@ -279,8 +279,6 @@ function renderCategories(categories) {
     categories.forEach(cat => {
         const card = document.createElement('div');
         card.className = 'category-card';
-        // на свой вкус можно подставить фон по имени категории
-        card.style.backgroundImage = `url('/images/${cat.category_name}.jpg')`;
 
         const title = document.createElement('h3');
         title.textContent = cat.category_name;
