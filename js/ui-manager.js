@@ -8,6 +8,8 @@ import {
     linkInput,
     addLinkBtn,
     startBtn,
+    answerForm,
+    answersContainer
 } from "./dom-elements.js"
 import {
     currentCode,
@@ -62,21 +64,10 @@ function showGame(categories) {
         renderCategories(categories)
     }
 
-    // Если текущий игрок - хост, скрываем форму ответа
-    import("./game-state.js").then(({ isHost }) => {
-        if (isHost) {
-            const answerForm = document.getElementById("answer-form")
-            if (answerForm) {
-                answerForm.classList.add("hidden")
-            }
-
-            // Показываем контейнер ответов для хоста сразу
-            const answersContainer = document.getElementById("answers-container")
-            if (answersContainer) {
-                answersContainer.classList.remove("hidden")
-            }
-        }
-    })
+    if (isHost) {
+        answerForm.classList.add("disabled");
+        answersContainer.classList.remove("hidden");
+    }
 
     // Подключаемся к WebSocket, если еще не подключены
     connectWebSocket()
@@ -144,6 +135,10 @@ async function createRoom(nickname) {
 async function joinRoom(nickname, code) {
     if (!nickname || !code) {
         return alert("Введите ник и код комнаты")
+    } else if (!nickname) {
+        return alert("Введите ник")
+    } else if (!code) {
+        return alert("Введите код комнаты")
     }
 
     try {
@@ -175,7 +170,7 @@ function startGame(socket) {
     console.log("Sending start_game request")
     socket.send(
         JSON.stringify({
-            type: "start_game", // Используем type вместо event_type
+            type: "start_game",
             payload: {},
         }),
     )

@@ -21,7 +21,7 @@ import {
     linkAdded,
     currentPlayerId,
 } from "./game-state.js"
-import { showWaiting, addPlaylistLink, createRoom, joinRoom } from "./ui-manager.js"
+import {showWaiting, addPlaylistLink, createRoom, joinRoom, startGame} from "./ui-manager.js"
 
 // Setup all event handlers
 function setupEventHandlers() {
@@ -94,15 +94,7 @@ function setupEventHandlers() {
     // Обновляем обработчик кнопки старта игры
     // Start game button (host only)
     startBtn?.addEventListener("click", () => {
-        if (socket) {
-            console.log("Sending start_game request")
-            socket.send(
-                JSON.stringify({
-                    type: "start_game",
-                    payload: {},
-                }),
-            )
-        }
+        startGame();
     })
 
     // Добавляем обработчик стандартного события submit, чтобы предотвратить перезагрузку страницы

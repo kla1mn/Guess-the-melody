@@ -178,9 +178,9 @@ function isChoosingPlayer() {
         currentNick,
         currentPlayerId,
         choosingPlayerId,
-        result: currentPlayerId === choosingPlayerId,
+        result: Number(currentPlayerId) === choosingPlayerId,
     })
-    return currentPlayerId === choosingPlayerId
+    return Number(currentPlayerId) === choosingPlayerId
 }
 
 // Получение никнейма по ID игрока
@@ -210,8 +210,31 @@ function updatePlayerScore(nickname, points) {
     if (!playersScores[nickname]) {
         playersScores[nickname] = 0
     }
-    playersScores[nickname] += points
+    playersScores[nickname] = points
     saveState()
+}
+
+// Установить счет игрока
+function setPlayerScore(nickname, points) {
+    playersScores[nickname] = points
+    saveState()
+}
+
+// Установить счет всех игроков
+function setAllPlayersScores(scores) {
+    playersScores = { ...scores }
+    saveState()
+}
+
+// Получить отсортированный список игроков по очкам
+function getSortedPlayersByScore() {
+    // Фильтруем хоста, если текущий игрок - хост
+    const filteredScores = { ...playersScores }
+
+    // Возвращаем отсортированный список
+    return Object.entries(filteredScores)
+        .map(([nickname, score]) => ({ nickname, score }))
+        .sort((a, b) => b.score - a.score)
 }
 
 // Обновить маппинг ID игроков к никнеймам
@@ -253,6 +276,9 @@ export {
     resetAnsweredPlayers,
     addPlayerToAnswered,
     updatePlayerScore,
+    setPlayerScore,
+    setAllPlayersScores,
+    getSortedPlayersByScore,
     updatePlayerMappings,
 }
 

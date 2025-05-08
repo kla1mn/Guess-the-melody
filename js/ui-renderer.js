@@ -7,10 +7,11 @@ import {
     playersScores,
     setCurrentAudioPlayer,
     addPlayerToAnswered,
+    getSortedPlayersByScore,
 } from "./game-state.js"
 import { playersListEl, categoriesCt } from "./dom-elements.js"
 
-// Render the list of players
+// Изменяем функцию renderPlayersList, чтобы не показывать очки в лобби
 function renderPlayersList(players) {
     playersListEl.innerHTML = ""
     players.forEach((p) => {
@@ -22,10 +23,12 @@ function renderPlayersList(players) {
             li.dataset.playerId = p.id.toString()
         }
 
-        // Добавляем счет, если игра началась
-        if (playersScores[p.nickname] !== undefined) {
-            li.textContent += ` - ${playersScores[p.nickname]} очков`
-        }
+        // Добавляем счет, только если игра началась
+        import("./game-state.js").then(({ gameStarted }) => {
+            if (gameStarted && playersScores[p.nickname] !== undefined) {
+                li.textContent += ` - ${playersScores[p.nickname]} очков`
+            }
+        })
 
         // Добавляем класс для выбирающего игрока
         import("./game-state.js").then(({ choosingPlayerId }) => {
@@ -39,7 +42,7 @@ function renderPlayersList(players) {
     })
 }
 
-// Add a single player to the list
+// Изменяем функцию addPlayerToList, чтобы не показывать очки в лобби
 function addPlayerToList(nickname, isMaster = false, playerId = null) {
     const li = document.createElement("li")
     li.textContent = nickname + (isMaster ? " (хост)" : "")
@@ -49,10 +52,12 @@ function addPlayerToList(nickname, isMaster = false, playerId = null) {
         li.dataset.playerId = playerId.toString()
     }
 
-    // Добавляем счет, если игра началась
-    if (playersScores[nickname] !== undefined) {
-        li.textContent += ` - ${playersScores[nickname]} очков`
-    }
+    // Добавляем счет, только если игра началась
+    import("./game-state.js").then(({ gameStarted }) => {
+        if (gameStarted && playersScores[nickname] !== undefined) {
+            li.textContent += ` - ${playersScores[nickname]} очков`
+        }
+    })
 
     // Добавляем класс для выбирающего игрока
     import("./game-state.js").then(({ choosingPlayerId }) => {
@@ -87,6 +92,32 @@ function renderCategories(categories) {
         return
     }
 
+    // Добавляем нопку для показа таблицы лидеров
+    const leaderboardBtn = document.createElement("button")
+    leaderboardBtn.textContent = "Таблица лидеров"
+    leaderboardBtn.className = "leaderboard-btn"
+    leaderboardBtn.style.position = "fixed"
+    leaderboardBtn.style.top = "10px"
+    leaderboardBtn.style.left = "10px"
+    leaderboardBtn.style.zIndex = "1000"
+    leaderboardBtn.style.padding = "8px 16px"
+    leaderboardBtn.style.backgroundColor = "#4a90e2"
+    leaderboardBtn.style.color = "white"
+    leaderboardBtn.style.border = "none"
+    leaderboardBtn.style.borderRadius = "5px"
+    leaderboardBtn.style.cursor = "pointer"
+    leaderboardBtn.style.fontSize = "14px"
+    leaderboardBtn.onclick = showLeaderboard
+
+    // Удаляем существующую кнопку, если она есть
+    const existingBtn = document.getElementById("leaderboard-btn")
+    if (existingBtn) {
+        existingBtn.remove()
+    }
+
+    leaderboardBtn.id = "leaderboard-btn"
+    document.body.appendChild(leaderboardBtn)
+
     // Добавляем информацию о текущем выбирающем
     const infoEl = document.createElement("div")
     infoEl.id = "game-info"
@@ -99,36 +130,19 @@ function renderCategories(categories) {
         infoEl.innerHTML = `<p>Вы выбираете мелодию. Выберите категорию и мелодию.</p>`
     } else {
         // Импортируем choosingPlayerId для отображения имени
-        import("./game-state.js").then(({ choosingPlayerId }) => {
+        import("./game-state.js").then(({choosingPlayerId, getNicknameById}) => {
             // Находим никнейм игрока по ID
-            const playersList = document.getElementById("players-list")
-            let choosingPlayerName = choosingPlayerId
-
-            if (playersList) {
-                const players = Array.from(playersList.children)
-                for (const player of players) {
-                    if (player.dataset.playerId === choosingPlayerId) {
-                        choosingPlayerName = player.textContent.split("(")[0].trim()
-                        break
-                    }
-                }
-            }
-
+            const choosingPlayerName = getNicknameById(choosingPlayerId)
             infoEl.innerHTML = `<p>Игрок ${choosingPlayerName} выбирает мелодию...</p>`
         })
     }
 
     categoriesCt.appendChild(infoEl)
 
-    // Важно: показываем категории только если текущий игрок - выбирающий или хост
-    // Проверяем, является ли текущий игрок выбирающим
-    if (!isChoosing && !isHost) {
-        console.log("Current player is not choosing and not host, hiding categories")
-        return
-    }
-
-    console.log("Showing categories for choosing player or host")
-    categories.forEach((cat) => {
+    if (isChoosing || isHost)
+    {
+        console.log("Showing categories for choosing player or host")
+        categories.forEach((cat) => {
         const card = document.createElement("div")
         card.className = "category-card"
         // на свой вкус можно подставить фон по имени категории
@@ -186,6 +200,7 @@ function renderCategories(categories) {
         card.appendChild(btns)
         categoriesCt.appendChild(card)
     })
+    }
 }
 
 // Улучшаем функцию playMelody для решения проблемы с автовоспроизведением
@@ -205,18 +220,10 @@ function playMelody(link, startTime, endTime) {
     // Сохраняем ссылку на аудио-плеер
     setCurrentAudioPlayer(audioPlayer)
 
-    // Если указано время начала, устанавливаем его
-    if (startTime) {
-        audioPlayer.currentTime = startTime
-    }
-
-    // Если указано время окончания, устанавливаем таймер
-    if (endTime) {
-        const duration = endTime - (startTime || 0)
-        setTimeout(() => {
-            audioPlayer.pause()
-        }, duration * 1000)
-    }
+    // Ограничиваем воспроизведение 30 секундами
+    setTimeout(() => {
+        audioPlayer.pause()
+    }, 30 * 1000)
 
     // Показываем интерфейс для ответов только для не-хоста
     if (!isHost) {
@@ -294,7 +301,7 @@ function showAnswersContainer() {
     }
 }
 
-// Обновляем функцию addPlayerAnswer для добавления кнопок оценки и улучшения отображения
+// Обновляем функцию addPlayerAnswer для лучшего отображения
 function addPlayerAnswer(nickname, answer, correctAnswer) {
     console.log("Adding player answer to UI:", nickname, answer, correctAnswer)
 
@@ -336,6 +343,10 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
         answerElement.classList.add("host-view")
     }
 
+    // Создаем контейнер для имени и ответа
+    const answerContentDiv = document.createElement("div")
+    answerContentDiv.style.flex = "1"
+
     // Создаем элемент для имени игрока
     const nameElement = document.createElement("span")
     nameElement.className = "player-name"
@@ -346,8 +357,9 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
     answerTextElement.className = "answer-text"
     answerTextElement.textContent = answer
 
-    answerElement.appendChild(nameElement)
-    answerElement.appendChild(answerTextElement)
+    answerContentDiv.appendChild(nameElement)
+    answerContentDiv.appendChild(answerTextElement)
+    answerElement.appendChild(answerContentDiv)
 
     // Если текущий игрок - хост, добавляем кнопки для оценки ответа и показываем правильный ответ
     if (isHost) {
@@ -356,9 +368,6 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
             const correctAnswerEl = document.createElement("div")
             correctAnswerEl.className = "correct-answer"
             correctAnswerEl.textContent = `Правильный ответ: ${correctAnswer}`
-            correctAnswerEl.style.fontWeight = "bold"
-            correctAnswerEl.style.color = "#FFD700"
-            correctAnswerEl.style.marginTop = "5px"
             answerElement.appendChild(correctAnswerEl)
         }
 
@@ -371,17 +380,25 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
         acceptButton.title = "Принять ответ"
         acceptButton.className = "accept-button"
         acceptButton.onclick = () => {
-            if (socket) {
-                socket.send(
-                    JSON.stringify({
-                        type: "accept_answer",
-                        payload: {},
-                    }),
-                )
-            }
-            buttonsContainer.remove()
+            try {
+                if (socket) {
+                    socket.send(
+                        JSON.stringify({
+                            type: "accept_answer",
+                            payload: {
+                                nickname: nickname,
+                            },
+                        }),
+                    )
+                }
+                // Удаляем кнопки после нажатия
+                buttonsContainer.remove()
 
-            answerElement.classList.add("accepted-answer")
+                // Добавляем класс для визуального отображения принятого ответа
+                answerElement.classList.add("accepted-answer")
+            } catch (error) {
+                console.error("Error sending accept_answer:", error)
+            }
         }
 
         // Кнопка "Частично принять ответ"
@@ -390,17 +407,25 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
         partialButton.title = "Частично принять ответ"
         partialButton.className = "partial-button"
         partialButton.onclick = () => {
-            if (socket) {
-                socket.send(
-                    JSON.stringify({
-                        type: "accept_answer_partially",
-                        payload: {},
-                    }),
-                )
-            }
-            buttonsContainer.remove()
+            try {
+                if (socket) {
+                    socket.send(
+                        JSON.stringify({
+                            type: "accept_answer_partially",
+                            payload: {
+                                nickname: nickname,
+                            },
+                        }),
+                    )
+                }
+                // Удаляем кнопки после нажатия
+                buttonsContainer.remove()
 
-            answerElement.classList.add("partially-accepted-answer")
+                // Добавляем класс для визуального отображения частично принятого ответа
+                answerElement.classList.add("partially-accepted-answer")
+            } catch (error) {
+                console.error("Error sending accept_answer_partially:", error)
+            }
         }
 
         // Кнопка "Отклонить ответ"
@@ -409,19 +434,25 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
         rejectButton.title = "Отклонить ответ"
         rejectButton.className = "reject-button"
         rejectButton.onclick = () => {
-            if (socket) {
-                socket.send(
-                    JSON.stringify({
-                        type: "reject_answer",
-                        payload: {},
-                    }),
-                )
-            }
-            // Удаляем кнопки после нажатия
-            buttonsContainer.remove()
+            try {
+                if (socket) {
+                    socket.send(
+                        JSON.stringify({
+                            type: "reject_answer",
+                            payload: {
+                                nickname: nickname,
+                            },
+                        }),
+                    )
+                }
+                // Удаляем кнопки после нажатия
+                buttonsContainer.remove()
 
-            // Добавляем класс для визуального отображения отклоненного ответа
-            answerElement.classList.add("rejected-answer")
+                // Добавляем класс для визуального отображения отклоненного ответа
+                answerElement.classList.add("rejected-answer")
+            } catch (error) {
+                console.error("Error sending reject_answer:", error)
+            }
         }
 
         buttonsContainer.appendChild(acceptButton)
@@ -437,7 +468,7 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
     answersContainer.scrollTop = answersContainer.scrollHeight
 }
 
-// Обновить счет игрока в интерфейсе
+// Изменяем функцию updateScoreDisplay, чтобы обновлять таблицу лидеров
 function updateScoreDisplay(nickname, points) {
     const playerItems = Array.from(playersListEl.children)
 
@@ -446,9 +477,23 @@ function updateScoreDisplay(nickname, points) {
             // Обновляем текст элемента, сохраняя метку хоста, если она есть
             const isHostText = item.textContent.includes("(хост)") ? " (хост)" : ""
             const isChoosingText = item.textContent.includes("(выбирает мелодию)") ? " (выбирает мелодию)" : ""
-            item.textContent = `${nickname}${isHostText}${isChoosingText} - ${points} очков`
+
+            // Проверяем, началась ли игра
+            import("./game-state.js").then(({ gameStarted }) => {
+                if (gameStarted) {
+                    item.textContent = `${nickname}${isHostText}${isChoosingText} - ${points} очков`
+                } else {
+                    item.textContent = `${nickname}${isHostText}${isChoosingText}`
+                }
+            })
             break
         }
+    }
+
+    // Обновляем таблицу лидеров, если она открыта
+    const leaderboardModal = document.querySelector(".leaderboard-modal")
+    if (leaderboardModal) {
+        updateLeaderboardTable(leaderboardModal)
     }
 }
 
@@ -461,6 +506,192 @@ function clearAnswersContainer() {
     }
 }
 
+// Добавляем новую функцию для обновления таблицы лидеров
+function updateLeaderboardTable(modal) {
+    // Получаем отсортированный список игроков по очкам
+    const sortedPlayers = getSortedPlayersByScore()
+
+    // Находим тело таблицы
+    const tbody = modal.querySelector("tbody")
+    if (!tbody) return
+
+    // Очищаем таблицу
+    tbody.innerHTML = ""
+
+    // Добавляем строки с игроками
+    sortedPlayers.forEach((player, index) => {
+        const row = document.createElement("tr")
+
+        // Выделяем текущего игрока
+        if (player.nickname === currentNick) {
+            row.style.backgroundColor = "rgba(74, 144, 226, 0.1)"
+            row.style.fontWeight = "bold"
+        }
+
+        // Выделяем первые три места
+        if (index < 3) {
+            row.style.color = ["#FFD700", "#C0C0C0", "#CD7F32"][index]
+            row.style.fontWeight = "bold"
+        }
+
+        const rankCell = document.createElement("td")
+        rankCell.textContent = (index + 1).toString()
+        rankCell.style.padding = "10px"
+        rankCell.style.borderBottom = "1px solid #ddd"
+
+        const nameCell = document.createElement("td")
+        nameCell.textContent = player.nickname
+        nameCell.style.padding = "10px"
+        nameCell.style.borderBottom = "1px solid #ddd"
+
+        const scoreCell = document.createElement("td")
+        scoreCell.textContent = player.score.toString()
+        scoreCell.style.padding = "10px"
+        scoreCell.style.borderBottom = "1px solid #ddd"
+        scoreCell.style.textAlign = "right"
+
+        row.appendChild(rankCell)
+        row.appendChild(nameCell)
+        row.appendChild(scoreCell)
+        tbody.appendChild(row)
+    })
+}
+
+// Добавляем функцию для автоматического обновления таблицы лидеров
+function setupLeaderboardAutoUpdate() {
+    // Обновляем таблицу лидеров каждые 2 секунды
+    const leaderboardInterval = setInterval(() => {
+        const leaderboardModal = document.querySelector(".leaderboard-modal")
+        if (leaderboardModal) {
+            updateLeaderboardTable(leaderboardModal)
+        } else {
+            // Если модальное окно закрыто, останавливаем интервал
+            clearInterval(leaderboardInterval)
+        }
+    }, 2000)
+
+    return leaderboardInterval
+}
+
+// Модифицируем функцию showLeaderboard, чтобы использовать автоматическое обновление
+function showLeaderboard() {
+    console.log("Showing leaderboard")
+
+    // Проверяем, не открыта ли уже таблица лидеров
+    if (document.querySelector(".leaderboard-modal")) {
+        return
+    }
+
+    // Создаем модальное окно для таблицы лидеров
+    const modal = document.createElement("div")
+    modal.className = "leaderboard-modal"
+    modal.style.position = "fixed"
+    modal.style.top = "0"
+    modal.style.left = "0"
+    modal.style.width = "100%"
+    modal.style.height = "100%"
+    modal.style.backgroundColor = "rgba(0, 0, 0, 0.7)"
+    modal.style.display = "flex"
+    modal.style.justifyContent = "center"
+    modal.style.alignItems = "center"
+    modal.style.zIndex = "2000"
+
+    // Создаем контейнер для таблицы
+    const container = document.createElement("div")
+    container.className = "leaderboard-container"
+    container.style.backgroundColor = "white"
+    container.style.padding = "20px"
+    container.style.borderRadius = "10px"
+    container.style.maxWidth = "400px"
+    container.style.width = "80%"
+    container.style.maxHeight = "80vh"
+    container.style.overflowY = "auto"
+
+    // Создаем заголовок
+    const title = document.createElement("h2")
+    title.textContent = "Таблица лидеров"
+    title.style.textAlign = "center"
+    title.style.marginBottom = "20px"
+    title.style.color = "#333"
+
+    // Создаем таблицу
+    const table = document.createElement("table")
+    table.style.width = "100%"
+    table.style.borderCollapse = "collapse"
+
+    // Создаем заголовок таблицы
+    const thead = document.createElement("thead")
+    const headerRow = document.createElement("tr")
+
+    const rankHeader = document.createElement("th")
+    rankHeader.textContent = "Место"
+    rankHeader.style.padding = "10px"
+    rankHeader.style.borderBottom = "2px solid #ddd"
+    rankHeader.style.textAlign = "left"
+
+    const nameHeader = document.createElement("th")
+    nameHeader.textContent = "Игрок"
+    nameHeader.style.padding = "10px"
+    nameHeader.style.borderBottom = "2px solid #ddd"
+    nameHeader.style.textAlign = "left"
+
+    const scoreHeader = document.createElement("th")
+    scoreHeader.textContent = "Очки"
+    scoreHeader.style.padding = "10px"
+    scoreHeader.style.borderBottom = "2px solid #ddd"
+    scoreHeader.style.textAlign = "right"
+
+    headerRow.appendChild(rankHeader)
+    headerRow.appendChild(nameHeader)
+    headerRow.appendChild(scoreHeader)
+    thead.appendChild(headerRow)
+    table.appendChild(thead)
+
+    // Создаем тело таблицы
+    const tbody = document.createElement("tbody")
+    table.appendChild(tbody)
+
+    // Заполняем таблицу данными
+    updateLeaderboardTable(modal)
+
+    // Запускаем автоматическое обновление таблицы
+    const updateInterval = setupLeaderboardAutoUpdate()
+
+    // Создаем кнопку закрытия
+    const closeButton = document.createElement("button")
+    closeButton.textContent = "Закрыть"
+    closeButton.style.display = "block"
+    closeButton.style.margin = "20px auto 0"
+    closeButton.style.padding = "10px 20px"
+    closeButton.style.backgroundColor = "#4a90e2"
+    closeButton.style.color = "white"
+    closeButton.style.border = "none"
+    closeButton.style.borderRadius = "5px"
+    closeButton.style.cursor = "pointer"
+    closeButton.onclick = () => {
+        document.body.removeChild(modal)
+        clearInterval(updateInterval)
+    }
+
+    // Собираем все вместе
+    container.appendChild(title)
+    container.appendChild(table)
+    container.appendChild(closeButton)
+    modal.appendChild(container)
+
+    // Добавляем модальное окно на страницу
+    document.body.appendChild(modal)
+
+    // Закрытие по клику вне таблицы
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal)
+            clearInterval(updateInterval)
+        }
+    })
+}
+
+// Добавляем функцию в экспорт
 export {
     renderPlayersList,
     addPlayerToList,
@@ -473,4 +704,7 @@ export {
     addPlayerAnswer,
     updateScoreDisplay,
     clearAnswersContainer,
+    showLeaderboard,
+    updateLeaderboardTable,
+    setupLeaderboardAutoUpdate,
 }
