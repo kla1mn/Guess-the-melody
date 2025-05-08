@@ -2,17 +2,25 @@
 /* Стили для кнопки таблицы лидеров */
 .leaderboard-btn {
     position: fixed;
-    top: 10px;
-    left: 10px;
+    top: 20px;
+    left: 20px;
     z-index: 1000;
-    padding: 8px 16px;
-    background-color: #4a90e2;
+    padding: 10px 20px;
+    background-color: #ff5c00;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
     width: auto;
+    font-weight: 600;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.leaderboard-btn:hover {
+    background-color: #ff7a33;
+    transform: translateY(-2px);
 }
 
 /* Стили для модального окна таблицы лидеров */
@@ -22,56 +30,81 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 2000;
+    backdrop-filter: blur(5px);
 }
 
 .leaderboard-container {
-    background-color: white;
-    padding: 20px;
-    border-radius: 10px;
-    max-width: 400px;
-    width: 80%;
+    background-color: #2d2d2d;
+    padding: 30px;
+    border-radius: 16px;
+    max-width: 500px;
+    width: 90%;
     max-height: 80vh;
     overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .leaderboard-container h2 {
     text-align: center;
-    margin-bottom: 20px;
-    color: #333;
+    margin-bottom: 25px;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 700;
 }
 
 .leaderboard-container table {
     width: 100%;
     border-collapse: collapse;
+    margin-bottom: 20px;
 }
 
 .leaderboard-container th,
 .leaderboard-container td {
-    padding: 10px;
+    padding: 12px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #444;
 }
 
 .leaderboard-container th {
-    border-bottom: 2px solid #ddd;
+    border-bottom: 2px solid #ff5c00;
+    font-weight: 600;
+    color: #ff5c00;
 }
 
-.leaderboard-container tr:nth-child(1) {
+.leaderboard-container tr:nth-child(1) td {
     color: #ffd700;
     font-weight: bold;
 }
 
-.leaderboard-container tr:nth-child(2) {
+.leaderboard-container tr:nth-child(2) td {
     color: #c0c0c0;
     font-weight: bold;
 }
 
-.leaderboard-container tr:nth-child(3) {
+.leaderboard-container tr:nth-child(3) td {
     color: #cd7f32;
     font-weight: bold;
+}
+
+.leaderboard-container button {
+    background-color: #ff5c00;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin: 0 auto;
+    display: block;
+    width: auto;
+}
+
+.leaderboard-container button:hover {
+    background-color: #ff7a33;
 }

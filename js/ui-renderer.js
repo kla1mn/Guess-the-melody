@@ -141,29 +141,29 @@ function renderCategories(categories) {
     })
 }
 
-
+// Обновляем функцию setCategoryBackground для лучшего отображения фоновых изображений
 function setCategoryBackground(card, categoryName) {
-    const desired = `/images/${categoryName}.png`;
-    const fallback = `/images/unknown.png`;
-    const img = new Image();
+    const desired = `/images/${categoryName}.png`
+    const fallback = `/images/unknown.png`
+    const img = new Image()
 
     img.onload = () => {
-        card.style.backgroundImage = `url('${desired}')`;
-    };
+        card.style.backgroundImage = `url('${desired}')`
+    }
 
     img.onerror = () => {
-        card.style.backgroundImage = `url('${fallback}')`;
-    };
+        card.style.backgroundImage = `url('${fallback}')`
+    }
 
-    img.src = desired;
+    img.src = desired
 }
 
-
+// Обновляем функцию renderCategoryCards для улучшенного отображения
 function renderCategoryCards(categories) {
     categories.forEach((cat) => {
         const card = document.createElement("div")
         card.className = "category-card"
-        setCategoryBackground(card, cat.category_name);
+        setCategoryBackground(card, cat.category_name)
 
         const title = document.createElement("h3")
         title.textContent = cat.category_name
@@ -176,6 +176,8 @@ function renderCategoryCards(categories) {
             console.warn(`No melodies in category ${cat.category_name}`)
             const noMelodies = document.createElement("p")
             noMelodies.textContent = "Нет мелодий"
+            noMelodies.style.padding = "10px"
+            noMelodies.style.color = "#FFF"
             btns.appendChild(noMelodies)
         } else {
             cat.melodies.forEach((m) => {

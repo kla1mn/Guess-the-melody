@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Угадай Мелодию</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/game.css">
     <link rel="stylesheet" href="css/answers.css">
@@ -12,29 +15,32 @@
 <body>
 <!-- Начальный экран -->
 <div class="container" id="init-screen">
+    <div class="logo">♪</div>
     <h1>Угадай Мелодию</h1>
-    <input type="text" id="init-nickname-input" placeholder="Свой ник">
+    <input type="text" id="init-nickname-input" placeholder="Введите ваш никнейм">
     <button id="create-btn">Создать комнату</button>
     <button id="join-menu-btn">Войти по коду</button>
 </div>
 
 <!-- Экран входа в комнату -->
 <div class="container hidden" id="join-screen">
+    <div class="logo">♪</div>
     <h1>Войти в комнату</h1>
-    <input type="text" id="join-nickname-input" placeholder="Свой ник">
-    <input type="text" id="join-invite-input" placeholder="Введи инвайт код">
+    <input type="text" id="join-nickname-input" placeholder="Введите ваш никнейм">
+    <input type="text" id="join-invite-input" placeholder="Введите код приглашения">
     <button id="enter-btn">Войти</button>
     <button id="back-btn">Назад</button>
 </div>
 
 <!-- Экран ожидания -->
 <div class="container hidden" id="waiting-screen">
+    <div class="logo">♪</div>
     <h2>Комната: <span id="room-code"></span></h2>
     <p>Ожидаем других игроков...</p>
     <ul id="players-list"></ul>
     <!-- Поле для загрузки ссылки -->
-    <input type="text" id="link-input" placeholder="Ваша ссылка на плейлист">
-    <button id="add-link-btn">Добавить ссылку</button>
+    <input type="text" id="link-input" placeholder="Ссылка на плейлист Яндекс.Музыки">
+    <button id="add-link-btn">Добавить плейлист</button>
 
     <!-- Кнопка старта (видна только хосту) -->
     <button id="start-btn" class="hidden">Начать игру</button>
@@ -60,7 +66,7 @@
 <audio id="audio-player" controls class="hidden"></audio>
 
 <!-- Кнопка выхода из игры -->
-<button id="logout-btn" class="logout-btn">Выйти из игры</button>
+<button id="logout-btn" class="logout-btn hidden">Выйти из игры</button>
 
 <script type="module" src="js/main.js"></script>
 </body>
