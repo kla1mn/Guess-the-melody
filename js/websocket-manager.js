@@ -1,4 +1,4 @@
-import { WS_BACKEND, BACKEND } from "./config.js"
+import { WS_BACKEND } from "./config.js"
 import {
     setSocket,
     resetAnsweredPlayers,
@@ -142,6 +142,9 @@ function handleEvent(type, payload) {
             // Обработчик события start_game
             case "start_game":
                 console.log("start_game received with payload:", payload)
+
+                // Показываем кнопку выхода из игры
+                document.getElementById("logout-btn").classList.remove("hidden")
 
                 // Устанавливаем игрока, который выбирает мелодию
                 if (payload.state_info && payload.state_info.choosing_player_id) {
@@ -328,19 +331,32 @@ function handleEvent(type, payload) {
                             })
                         }
 
-                        const message = document.createElement("div")
-                        message.className = "system-message"
-                        message.textContent = `Ответ игрока ${lastPlayerNickname} частично принят! Теперь у него ${payload.new_points} очков`
+                        // Проверяем, нет ли уже сообщения об этом ответе
+                        const existingMessages = document.querySelectorAll(".system-message")
+                        let isDuplicate = false
+                        existingMessages.forEach((msg) => {
+                            if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} частично принят!`)) {
+                                isDuplicate = true
+                            }
+                        })
 
-                        setTimeout(() => {
-                            message.style.opacity = "0"
-                            message.style.transition = "opacity 0.5s"
-                            setTimeout(() => message.remove(), 500)
-                        }, 3000)
+                        // Добавляем сообщение только если оно не дублируется
+                        if (!isDuplicate) {
+                            const message = document.createElement("div")
+                            message.className = "system-message"
+                            message.textContent = `Ответ игрока ${lastPlayerNickname} частично принят! Теперь у него ${payload.new_points} очков`
 
-                        const answersContainer = document.getElementById("answers-container")
-                        if (answersContainer) {
-                            answersContainer.appendChild(message)
+                            const answersContainer = document.getElementById("answers-container")
+                            if (answersContainer) {
+                                answersContainer.appendChild(message)
+
+                                // Удаляем сообщение через 3 секунды
+                                setTimeout(() => {
+                                    message.style.opacity = "0"
+                                    message.style.transition = "opacity 0.5s"
+                                    setTimeout(() => message.remove(), 500)
+                                }, 3000)
+                            }
                         }
                     }
 
@@ -384,20 +400,32 @@ function handleEvent(type, payload) {
                             })
                         }
 
-                        // Показываем сообщение
-                        const message = document.createElement("div")
-                        message.className = "system-message"
-                        message.textContent = `Ответ игрока ${lastPlayerNickname} принят! Теперь у него ${payload.new_points} очков`
+                        // Проверяем, нет ли уже сообщения об этом ответе
+                        const existingMessages = document.querySelectorAll(".system-message")
+                        let isDuplicate = false
+                        existingMessages.forEach((msg) => {
+                            if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} принят!`)) {
+                                isDuplicate = true
+                            }
+                        })
 
-                        setTimeout(() => {
-                            message.style.opacity = "0"
-                            message.style.transition = "opacity 0.5s"
-                            setTimeout(() => message.remove(), 500)
-                        }, 3000)
+                        // Добавляем сообщение только если оно не дублируется
+                        if (!isDuplicate) {
+                            const message = document.createElement("div")
+                            message.className = "system-message"
+                            message.textContent = `Ответ игрока ${lastPlayerNickname} принят! Теперь у него ${payload.new_points} очков`
 
-                        const answersContainer = document.getElementById("answers-container")
-                        if (answersContainer) {
-                            answersContainer.appendChild(message)
+                            const answersContainer = document.getElementById("answers-container")
+                            if (answersContainer) {
+                                answersContainer.appendChild(message)
+
+                                // Удаляем сообщение через 3 секунды
+                                setTimeout(() => {
+                                    message.style.opacity = "0"
+                                    message.style.transition = "opacity 0.5s"
+                                    setTimeout(() => message.remove(), 500)
+                                }, 3000)
+                            }
                         }
                     }
 
@@ -421,6 +449,13 @@ function handleEvent(type, payload) {
                             const answersContainer = document.getElementById("answers-container")
                             if (answersContainer) {
                                 answersContainer.appendChild(nextMessage)
+
+                                // Удаляем сообщение через 3 секунды
+                                setTimeout(() => {
+                                    nextMessage.style.opacity = "0"
+                                    nextMessage.style.transition = "opacity 0.5s"
+                                    setTimeout(() => nextMessage.remove(), 500)
+                                }, 3000)
                             }
 
                             // Обновляем интерфейс для нового раунда
@@ -459,13 +494,32 @@ function handleEvent(type, payload) {
                             })
                         }
 
-                        const message = document.createElement("div")
-                        message.className = "system-message"
-                        message.textContent = `Ответ игрока ${lastPlayerNickname} отклонен! Теперь у него ${payload.new_points} очков`
+                        // Проверяем, нет ли уже сообщения об этом ответе
+                        const existingMessages = document.querySelectorAll(".system-message")
+                        let isDuplicate = false
+                        existingMessages.forEach((msg) => {
+                            if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} отклонен!`)) {
+                                isDuplicate = true
+                            }
+                        })
 
-                        const answersContainer = document.getElementById("answers-container")
-                        if (answersContainer) {
-                            answersContainer.appendChild(message)
+                        // Добавляем сообщение только если оно не дублируется
+                        if (!isDuplicate) {
+                            const message = document.createElement("div")
+                            message.className = "system-message"
+                            message.textContent = `Ответ игрока ${lastPlayerNickname} отклонен! Теперь у него ${payload.new_points} очков`
+
+                            const answersContainer = document.getElementById("answers-container")
+                            if (answersContainer) {
+                                answersContainer.appendChild(message)
+
+                                // Удаляем сообщение через 3 секунды
+                                setTimeout(() => {
+                                    message.style.opacity = "0"
+                                    message.style.transition = "opacity 0.5s"
+                                    setTimeout(() => message.remove(), 500)
+                                }, 3000)
+                            }
                         }
                     }
 
@@ -482,7 +536,6 @@ function handleEvent(type, payload) {
                 if (payload.message === "The game has already begun") {
                     alert("Потерпи, игра уже началась")
 
-                    // Если получили сообщение, что игра уже началась, устанавливаем флаг
                     import("./game-state.js").then(({ setGameStarted }) => {
                         setGameStarted(true)
                     })

@@ -11,26 +11,22 @@ import {
 } from "./game-state.js"
 import { playersListEl, categoriesCt } from "./dom-elements.js"
 
-// Изменяем функцию renderPlayersList, чтобы не показывать очки в лобби
 function renderPlayersList(players) {
     playersListEl.innerHTML = ""
     players.forEach((p) => {
         const li = document.createElement("li")
         li.textContent = p.nickname + (p.is_master ? " (хост)" : "")
 
-        // Сохраняем ID игрока в атрибуте data-player-id
         if (p.id) {
             li.dataset.playerId = p.id.toString()
         }
 
-        // Добавляем счет, только если игра началась
         import("./game-state.js").then(({ gameStarted }) => {
             if (gameStarted && playersScores[p.nickname] !== undefined) {
                 li.textContent += ` - ${playersScores[p.nickname]} очков`
             }
         })
 
-        // Добавляем класс для выбирающего игрока
         import("./game-state.js").then(({ choosingPlayerId }) => {
             if (p.id && p.id.toString() === choosingPlayerId) {
                 li.classList.add("choosing-player")
@@ -42,24 +38,20 @@ function renderPlayersList(players) {
     })
 }
 
-// Изменяем функцию addPlayerToList, чтобы не показывать очки в лобби
 function addPlayerToList(nickname, isMaster = false, playerId = null) {
     const li = document.createElement("li")
     li.textContent = nickname + (isMaster ? " (хост)" : "")
 
-    // Сохраняем ID игрока в атрибуте data-player-id
     if (playerId) {
         li.dataset.playerId = playerId.toString()
     }
 
-    // Добавляем счет, только если игра началась
     import("./game-state.js").then(({ gameStarted }) => {
         if (gameStarted && playersScores[nickname] !== undefined) {
             li.textContent += ` - ${playersScores[nickname]} очков`
         }
     })
 
-    // Добавляем класс для выбирающего игрока
     import("./game-state.js").then(({ choosingPlayerId }) => {
         if (playerId && playerId.toString() === choosingPlayerId) {
             li.classList.add("choosing-player")
@@ -70,7 +62,6 @@ function addPlayerToList(nickname, isMaster = false, playerId = null) {
     playersListEl.appendChild(li)
 }
 
-// Remove a player from the list
 function removePlayerFromList(nickname) {
     Array.from(playersListEl.children).forEach((li) => {
         if (li.textContent.startsWith(nickname)) {
@@ -79,7 +70,6 @@ function removePlayerFromList(nickname) {
     })
 }
 
-// Modify the renderCategories function to better handle the isChoosing check
 function renderCategories(categories) {
     console.log("Rendering categories:", categories)
     categoriesCt.innerHTML = "" // очистить предыдущее
@@ -92,7 +82,6 @@ function renderCategories(categories) {
         return
     }
 
-    // Добавляем кнопку для показа таблицы лидеров
     const leaderboardBtn = document.createElement("button")
     leaderboardBtn.textContent = "Таблица лидеров"
     leaderboardBtn.className = "leaderboard-btn"
@@ -109,7 +98,6 @@ function renderCategories(categories) {
     leaderboardBtn.style.fontSize = "14px"
     leaderboardBtn.onclick = showLeaderboard
 
-    // Удаляем существующую кнопку, если она есть
     const existingBtn = document.getElementById("leaderboard-btn")
     if (existingBtn) {
         existingBtn.remove()
@@ -118,12 +106,10 @@ function renderCategories(categories) {
     leaderboardBtn.id = "leaderboard-btn"
     document.body.appendChild(leaderboardBtn)
 
-    // Добавляем информацию о текущем выбирающем
     const infoEl = document.createElement("div")
     infoEl.id = "game-info"
     infoEl.className = "game-info"
 
-    // Получаем актуальное значение isChoosingPlayer() и другие данные
     import("./game-state.js").then(({ isChoosingPlayer, choosingPlayerId, getNicknameById, currentPlayerId }) => {
         const isChoosing = isChoosingPlayer()
         console.log(
@@ -144,7 +130,6 @@ function renderCategories(categories) {
 
         categoriesCt.appendChild(infoEl)
 
-        // Проверяем, нужно ли показывать категории
         import("./game-state.js").then(({ isHost }) => {
             if (isChoosing || isHost) {
                 console.log("Showing categories for choosing player or host")
@@ -156,13 +141,29 @@ function renderCategories(categories) {
     })
 }
 
-// Extract the category rendering logic to a separate function
+
+function setCategoryBackground(card, categoryName) {
+    const desired = `/images/${categoryName}.png`;
+    const fallback = `/images/unknown.png`;
+    const img = new Image();
+
+    img.onload = () => {
+        card.style.backgroundImage = `url('${desired}')`;
+    };
+
+    img.onerror = () => {
+        card.style.backgroundImage = `url('${fallback}')`;
+    };
+
+    img.src = desired;
+}
+
+
 function renderCategoryCards(categories) {
     categories.forEach((cat) => {
         const card = document.createElement("div")
         card.className = "category-card"
-        // на свой вкус можно подставить фон по имени категории
-        card.style.backgroundImage = `url('/images/${cat.category_name}.png')`
+        setCategoryBackground(card, cat.category_name);
 
         const title = document.createElement("h3")
         title.textContent = cat.category_name
@@ -181,7 +182,6 @@ function renderCategoryCards(categories) {
                 const btn = document.createElement("button")
                 btn.textContent = m.points
 
-                // Если мелодия уже была угадана, делаем кнопку неактивной
                 if (m.is_guessed) {
                     btn.disabled = true
                     btn.style.opacity = "0.5"
@@ -189,11 +189,10 @@ function renderCategoryCards(categories) {
 
                 btn.addEventListener("click", () => {
                     console.log("Melody button clicked:", m)
-                    // Используем правильный тип события - pick_melody
                     import("./game-state.js").then(({ socket, isChoosingPlayer, isHost }) => {
                         if (socket && (isChoosingPlayer() || isHost)) {
                             const message = {
-                                type: "pick_melody", // Используем type вместо event_type
+                                type: "pick_melody",
                                 payload: {
                                     category: cat.category_name,
                                     melody: m.name || `Мелодия ${m.points}`,
@@ -204,7 +203,6 @@ function renderCategoryCards(categories) {
                             console.log("Sending message:", message)
                             socket.send(JSON.stringify(message))
 
-                            // Отмечаем мелодию как сыгранную
                             m.is_guessed = true
                             btn.disabled = true
                             btn.style.opacity = "0.5"
@@ -229,7 +227,6 @@ function playMelody(link, startTime = 0, maxDuration = 30) {
     }
 
     const audioPlayer = document.getElementById("audio-player")
-    // Если до этого вешали listener, его нужно снять
     if (onTimeUpdate) {
         audioPlayer.removeEventListener("timeupdate", onTimeUpdate)
     }
@@ -239,14 +236,11 @@ function playMelody(link, startTime = 0, maxDuration = 30) {
     audioPlayer.classList.remove("hidden")
     setCurrentAudioPlayer(audioPlayer)
 
-    // Показываем интерфейс для ответов только не-хосту
     if (!isHost) {
         showAnswerInterface()
     }
 
-    // Вешаем новый обработчик timeupdate
     onTimeUpdate = () => {
-        // Как только дойдём до границы, останавливаем и снимаем listener
         if (audioPlayer.currentTime >= startTime + maxDuration) {
             audioPlayer.pause()
             audioPlayer.removeEventListener("timeupdate", onTimeUpdate)
@@ -255,15 +249,12 @@ function playMelody(link, startTime = 0, maxDuration = 30) {
     }
     audioPlayer.addEventListener("timeupdate", onTimeUpdate)
 
-    // Пробуем включить автоматически
     audioPlayer.play().catch((error) => {
         console.log("Auto-play prevented by browser:", error)
     })
 }
 
-// Показать интерфейс для ответов
 function showAnswerInterface() {
-    // Если текущий игрок - выбирающий или уже ответил или хост, не показываем форму ответа
     if (isChoosingPlayer() || hasPlayerAnswered() || isHost) {
         return
     }
@@ -274,7 +265,6 @@ function showAnswerInterface() {
     }
 }
 
-// Скрыть интерфейс для ответов
 function hideAnswerInterface() {
     const answerForm = document.getElementById("answer-form")
     if (answerForm) {
@@ -282,7 +272,6 @@ function hideAnswerInterface() {
     }
 }
 
-// Показать контейнер ответов
 function showAnswersContainer() {
     const answersContainer = document.getElementById("answers-container")
     if (answersContainer) {
@@ -290,7 +279,6 @@ function showAnswersContainer() {
     }
 }
 
-// Обновляем функцию addPlayerAnswer для лучшего отображения
 function addPlayerAnswer(nickname, answer, correctAnswer) {
     console.log("Adding player answer to UI:", nickname, answer, correctAnswer)
 
@@ -300,18 +288,14 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
         return
     }
 
-    // Показываем контейнер ответов
     showAnswersContainer()
 
-    // ��обавляем игрока в список ответивших
     addPlayerToAnswered(nickname)
 
-    // Если текущий игрок ответил, скрываем форму ответа
     if (nickname === currentNick) {
         hideAnswerInterface()
     }
 
-    // Удаляем предыдущий ответ от этого игрока, если он есть
     const existingAnswers = answersContainer.querySelectorAll(".player-answer")
     existingAnswers.forEach((el) => {
         if (el.dataset.player === nickname) {
@@ -319,29 +303,23 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
         }
     })
 
-    // Создаем элемент ответа
     const answerElement = document.createElement("div")
     answerElement.className = "player-answer"
     answerElement.dataset.player = nickname
 
-    // Добавляем анимацию появления
     answerElement.style.animation = "fadeIn 0.5s"
 
-    // Если это хост, делаем ответ более заметным
     if (isHost) {
         answerElement.classList.add("host-view")
     }
 
-    // Создаем контейнер для имени и ответа
     const answerContentDiv = document.createElement("div")
     answerContentDiv.style.flex = "1"
 
-    // Создаем элемент для имени игрока
     const nameElement = document.createElement("span")
     nameElement.className = "player-name"
     nameElement.textContent = nickname + ": "
 
-    // Создаем элемент для текста ответа
     const answerTextElement = document.createElement("span")
     answerTextElement.className = "answer-text"
     answerTextElement.textContent = answer
@@ -350,9 +328,7 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
     answerContentDiv.appendChild(answerTextElement)
     answerElement.appendChild(answerContentDiv)
 
-    // Если текущий игрок - хост, добавляем кнопки для оценки ответа и показываем правильный ответ
     if (isHost) {
-        // Показываем правильный ответ для хоста
         if (correctAnswer) {
             const correctAnswerEl = document.createElement("div")
             correctAnswerEl.className = "correct-answer"
@@ -363,7 +339,6 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
         const buttonsContainer = document.createElement("div")
         buttonsContainer.className = "answer-buttons"
 
-        // Кнопка "Принять ответ"
         const acceptButton = document.createElement("button")
         acceptButton.textContent = "✓"
         acceptButton.title = "Принять ответ"
@@ -374,23 +349,18 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
                     socket.send(
                         JSON.stringify({
                             type: "accept_answer",
-                            payload: {
-                                nickname: nickname,
-                            },
+                            payload: {},
                         }),
                     )
                 }
-                // Удаляем кнопки после нажатия
                 buttonsContainer.remove()
 
-                // Добавляем класс для визуального отображения принятого ответа
                 answerElement.classList.add("accepted-answer")
             } catch (error) {
                 console.error("Error sending accept_answer:", error)
             }
         }
 
-        // Кнопка "Частично принять ответ"
         const partialButton = document.createElement("button")
         partialButton.textContent = "½"
         partialButton.title = "Частично принять ответ"
@@ -401,23 +371,18 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
                     socket.send(
                         JSON.stringify({
                             type: "accept_answer_partially",
-                            payload: {
-                                nickname: nickname,
-                            },
+                            payload: {},
                         }),
                     )
                 }
-                // Удаляем кнопки после нажатия
                 buttonsContainer.remove()
 
-                // Добавляем класс для визуального отображения частично принятого ответа
                 answerElement.classList.add("partially-accepted-answer")
             } catch (error) {
                 console.error("Error sending accept_answer_partially:", error)
             }
         }
 
-        // Кнопка "Отклонить ответ"
         const rejectButton = document.createElement("button")
         rejectButton.textContent = "✗"
         rejectButton.title = "Отклонить ответ"
@@ -428,16 +393,12 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
                     socket.send(
                         JSON.stringify({
                             type: "reject_answer",
-                            payload: {
-                                nickname: nickname,
-                            },
+                            payload: {},
                         }),
                     )
                 }
-                // Удаляем кнопки после нажатия
                 buttonsContainer.remove()
 
-                // Добавляем класс для визуального отображения отклоненного ответа
                 answerElement.classList.add("rejected-answer")
             } catch (error) {
                 console.error("Error sending reject_answer:", error)
@@ -453,11 +414,9 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
 
     answersContainer.appendChild(answerElement)
 
-    // Прокручиваем контейнер ответов вниз, чтобы показать новый ответ
     answersContainer.scrollTop = answersContainer.scrollHeight
 }
 
-// Обновляем функцию updateScoreDisplay, чтобы обновлять таблицу лидеров
 function updateScoreDisplay(nickname, points) {
     console.log("Updating score display for", nickname, "with points", points)
 
@@ -465,24 +424,20 @@ function updateScoreDisplay(nickname, points) {
 
     for (const item of playerItems) {
         if (item.textContent.startsWith(nickname)) {
-            // Обновляем текст элемента, сохраняя метку хоста, если она есть
             const isHostText = item.textContent.includes("(хост)") ? " (хост)" : ""
             const isChoosingText = item.textContent.includes("(выбирает мелодию)") ? " (выбирает мелодию)" : ""
 
-            // Всегда показываем очки, независимо от статуса игры
             item.textContent = `${nickname}${isHostText}${isChoosingText} - ${points} очков`
             break
         }
     }
 
-    // Обновляем таблицу лидеров, если она открыта
     const leaderboardModal = document.querySelector(".leaderboard-modal")
     if (leaderboardModal) {
         updateLeaderboardTable(leaderboardModal)
     }
 }
 
-// Очистить контейнер ответов
 function clearAnswersContainer() {
     const answersContainer = document.getElementById("answers-container")
     if (answersContainer) {
@@ -491,29 +446,22 @@ function clearAnswersContainer() {
     }
 }
 
-// Добавляем новую функцию для обновления таблицы лидеров
 function updateLeaderboardTable(modal) {
-    // Получаем отсортированный список игроков по очкам
     const sortedPlayers = getSortedPlayersByScore()
 
-    // Находим тело таблицы
     const tbody = modal.querySelector("tbody")
     if (!tbody) return
 
-    // Очищаем таблицу
     tbody.innerHTML = ""
 
-    // Добавляем строки с игроками
     sortedPlayers.forEach((player, index) => {
         const row = document.createElement("tr")
 
-        // Выделяем текущего игрока
         if (player.nickname === currentNick) {
             row.style.backgroundColor = "rgba(74, 144, 226, 0.1)"
             row.style.fontWeight = "bold"
         }
 
-        // Выделяем первые три места
         if (index < 3) {
             row.style.color = ["#FFD700", "#C0C0C0", "#CD7F32"][index]
             row.style.fontWeight = "bold"
@@ -542,15 +490,12 @@ function updateLeaderboardTable(modal) {
     })
 }
 
-// Добавляем функцию для автоматического обновления таблицы лидеров
 function setupLeaderboardAutoUpdate() {
-    // Обновляем таблицу лидеров каждые 2 секунды
     const leaderboardInterval = setInterval(() => {
         const leaderboardModal = document.querySelector(".leaderboard-modal")
         if (leaderboardModal) {
             updateLeaderboardTable(leaderboardModal)
         } else {
-            // Если модальное окно закрыто, останавливаем интервал
             clearInterval(leaderboardInterval)
         }
     }, 2000)
@@ -558,16 +503,13 @@ function setupLeaderboardAutoUpdate() {
     return leaderboardInterval
 }
 
-// Модифицируем функцию showLeaderboard, чтобы использовать автоматическое обновление
 function showLeaderboard() {
     console.log("Showing leaderboard")
 
-    // Проверяем, не открыта ли уже таблица лидеров
     if (document.querySelector(".leaderboard-modal")) {
         return
     }
 
-    // Создаем модальное окно для таблицы лидеров
     const modal = document.createElement("div")
     modal.className = "leaderboard-modal"
     modal.style.position = "fixed"
@@ -581,7 +523,6 @@ function showLeaderboard() {
     modal.style.alignItems = "center"
     modal.style.zIndex = "2000"
 
-    // Создаем контейнер для таблицы
     const container = document.createElement("div")
     container.className = "leaderboard-container"
     container.style.backgroundColor = "white"
@@ -592,19 +533,16 @@ function showLeaderboard() {
     container.style.maxHeight = "80vh"
     container.style.overflowY = "auto"
 
-    // Создаем заголовок
     const title = document.createElement("h2")
     title.textContent = "Таблица лидеров"
     title.style.textAlign = "center"
     title.style.marginBottom = "20px"
     title.style.color = "#333"
 
-    // Создаем таблицу
     const table = document.createElement("table")
     table.style.width = "100%"
     table.style.borderCollapse = "collapse"
 
-    // Создаем заголовок таблицы
     const thead = document.createElement("thead")
     const headerRow = document.createElement("tr")
 
@@ -632,17 +570,13 @@ function showLeaderboard() {
     thead.appendChild(headerRow)
     table.appendChild(thead)
 
-    // Создаем тело таблицы
     const tbody = document.createElement("tbody")
     table.appendChild(tbody)
 
-    // Заполняем таблицу данными
     updateLeaderboardTable(modal)
 
-    // Запускаем автоматическое обновление таблицы
     const updateInterval = setupLeaderboardAutoUpdate()
 
-    // Создаем кнопку закрытия
     const closeButton = document.createElement("button")
     closeButton.textContent = "Закрыть"
     closeButton.style.display = "block"
@@ -658,16 +592,13 @@ function showLeaderboard() {
         clearInterval(updateInterval)
     }
 
-    // Собираем все вместе
     container.appendChild(title)
     container.appendChild(table)
     container.appendChild(closeButton)
     modal.appendChild(container)
 
-    // Добавляем модальное окно на страницу
     document.body.appendChild(modal)
 
-    // Закрытие по клику вне таблицы
     modal.addEventListener("click", (e) => {
         if (e.target === modal) {
             document.body.removeChild(modal)
@@ -676,7 +607,6 @@ function showLeaderboard() {
     })
 }
 
-// Добавляем функцию в экспорт
 export {
     renderPlayersList,
     addPlayerToList,

@@ -21,12 +21,13 @@ import {
     linkAdded,
     currentPlayerId,
 } from "./game-state.js"
-import {showWaiting, addPlaylistLink, createRoom, joinRoom, startGame} from "./ui-manager.js"
-import {BACKEND} from "./config.js";
+import { showWaiting, addPlaylistLink, createRoom, joinRoom, startGame } from "./ui-manager.js"
+import { BACKEND } from "./config.js"
 
 // Setup all event handlers
 function setupEventHandlers() {
     console.log("Setting up event handlers")
+    document.getElementById("logout-btn").classList.add("hidden")
 
     // Create room button
     document.getElementById("create-btn")?.addEventListener("click", async () => {
@@ -79,6 +80,9 @@ function setupEventHandlers() {
         initScreen.classList.remove("hidden")
         initNickInput.value = currentNick
 
+        // Скрываем кнопку выхода из игры
+        document.getElementById("logout-btn").classList.add("hidden")
+
         clearState()
     })
 
@@ -91,6 +95,9 @@ function setupEventHandlers() {
 
             if (res.ok) {
                 console.log("Токен успешно удален")
+
+                // Скрываем кнопку выхода из игры
+                document.getElementById("logout-btn").classList.add("hidden")
 
                 clearState()
 
@@ -118,7 +125,7 @@ function setupEventHandlers() {
     // Обновляем обработчик кнопки старта игры
     // Start game button (host only)
     startBtn?.addEventListener("click", () => {
-        startGame(socket);
+        startGame(socket)
     })
 
     // Добавляем обработчик стандартного события submit, чтобы предотвратить перезагрузку страницы
@@ -170,7 +177,5 @@ function setupEventHandlers() {
         })
     })
 }
-
-
 
 export { setupEventHandlers }

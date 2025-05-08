@@ -64,6 +64,9 @@ function loadSavedState() {
             if (savedCurrentPlayerId) {
                 currentPlayerId = savedCurrentPlayerId
             }
+            if (gameStarted){
+                document.getElementById("logout-btn").classList.remove("hidden")
+            }
         } catch (e) {
             console.error("Error parsing saved data:", e)
             gameCategories = null
