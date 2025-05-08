@@ -1,4 +1,4 @@
-import { WS_BACKEND } from "./config.js"
+import { WS_BACKEND, BACKEND } from "./config.js"
 import {
     setSocket,
     resetAnsweredPlayers,
@@ -50,14 +50,6 @@ function connectWebSocket() {
 
         handleEvent(eventType, payload)
     })
-
-    // socket.addEventListener("close", (event) => {
-    //     console.log("WS: closed", event)
-    //     setTimeout(() => {
-    //         console.log("WS: attempting to reconnect...")
-    //         connectWebSocket()
-    //     }, 2000)
-    // })
 
     socket.addEventListener("error", (e) => {
         console.error("WS error", e)
@@ -157,36 +149,54 @@ function handleEvent(type, payload) {
                     const choosingPlayerId = payload.state_info.choosing_player_id
 
                     // Сохраняем ID выбирающего игрока
-                    import("./game-state.js").then(({ setChoosingPlayerId, setCurrentAnswer, getNicknameById, currentNick }) => {
-                        // Сохраняем ID
-                        setChoosingPlayerId(choosingPlayerId)
+                    import("./game-state.js").then(
+                        ({ setChoosingPlayerId, setCurrentAnswer, getNicknameById, currentNick, currentPlayerId }) => {
+                            // Сохраняем ID
+                            setChoosingPlayerId(choosingPlayerId)
 
-                        // Если есть информация о текущем ответе, сохраняем его
-                        if (payload.state_info.answer) {
-                            setCurrentAnswer(payload.state_info.answer)
-                        }
+                            console.log("Setting choosing player ID:", choosingPlayerId, "Current player ID:", currentPlayerId)
 
-                        // Обновляем интерфейс для отображения выбирающего игрока
-                        const infoEl = document.getElementById("game-info")
-                        if (infoEl) {
-                            const choosingPlayerNickname = getNicknameById(choosingPlayerId)
-                            if (choosingPlayerNickname === currentNick) {
-                                infoEl.innerHTML = `<p>Вы выбираете мелодию. Выберите категорию и мелодию.</p>`
-                            } else {
-                                infoEl.innerHTML = `<p>Игрок ${choosingPlayerNickname} выбирает мелодию...</p>`
+                            // Если есть информация о текущем ответе, сохраняем его
+                            if (payload.state_info.answer) {
+                                setCurrentAnswer(payload.state_info.answer)
                             }
-                        }
-                    })
+
+                            // Показываем игровой экран и сохраняем состояние ПОСЛЕ установки всех необходимых данных
+                            showGame(payload.categories)
+
+                            // Сбрасываем список ответивших игроков для нового раунда
+                            resetAnsweredPlayers()
+
+                            // Очищаем контейнер ответов
+                            clearAnswersContainer()
+
+                            // Обновляем интерфейс для отображения выбирающего игрока
+                            setTimeout(() => {
+                                const infoEl = document.getElementById("game-info")
+                                if (infoEl) {
+                                    const choosingPlayerNickname = getNicknameById(choosingPlayerId)
+                                    if (String(currentPlayerId) === String(choosingPlayerId)) {
+                                        infoEl.innerHTML = `<p>Вы выбираете категорию и мелодию.</p>`
+                                    } else {
+                                        infoEl.innerHTML = `<p>Игрок ${choosingPlayerNickname} выбирает мелодию...</p>`
+                                    }
+                                }
+
+                                // Перерисовываем категории после установки всех данных
+                                import("./ui-renderer.js").then(({ renderCategories }) => {
+                                    import("./game-state.js").then(({ gameCategories }) => {
+                                        renderCategories(gameCategories)
+                                    })
+                                })
+                            }, 200)
+                        },
+                    )
+                } else {
+                    // Если нет информации о выбирающем игроке, просто показываем игровой экран
+                    showGame(payload.categories)
+                    resetAnsweredPlayers()
+                    clearAnswersContainer()
                 }
-
-                // Показываем игровой экран и сохраняем состояние
-                showGame(payload.categories)
-
-                // Сбрасываем список ответивших игроков для нового раунда
-                resetAnsweredPlayers()
-
-                // Очищаем контейнер ответов
-                clearAnswersContainer()
                 break
 
             // Обработчик события pick_melody
@@ -221,8 +231,8 @@ function handleEvent(type, payload) {
                     import("./game-state.js").then(({ isHost, currentNick, isChoosingPlayer }) => {
                         if (isHost) {
                             // Ограничиваем воспроизведение 30 секундами
-                            playMelody(payload.link, payload.start_time, 30)
-                        } else if (!isChoosingPlayer()) {
+                            playMelody(payload.link)
+                        } else {
                             // Для остальных игроков (кроме выбирающего) показываем кнопку "Ответить"
                             const answerForm = document.getElementById("answer-form")
                             if (answerForm) {
@@ -298,105 +308,53 @@ function handleEvent(type, payload) {
                             addPlayerAnswer(payload.answering_player_nickname, payload.answer, payload.melody_name)
                         })
                     })
-                } else if (payload.nickname && payload.answer) {
-                    // Альтернативный формат данных
-                    import("./ui-renderer.js").then(({ addPlayerAnswer, showAnswersContainer }) => {
-                        import("./game-state.js").then(({ addPlayerToAnswered, currentAnswer }) => {
-                            // Добавляем игрока в список ответивших
-                            addPlayerToAnswered(payload.nickname)
-
-                            // Показываем контейнер ответов
-                            showAnswersContainer()
-
-                            // Добавляем ответ в интерфейс
-                            console.log(
-                                "Calling addPlayerAnswer with alternative format:",
-                                payload.nickname,
-                                payload.answer,
-                                currentAnswer,
-                            )
-                            addPlayerAnswer(payload.nickname, payload.answer, currentAnswer)
-                        })
-                    })
                 }
                 break
 
-            // Обновляем обработчик события accept_answer_partially
             case "accept_answer_partially":
                 console.log("accept_answer_partially", payload)
-                // Обработка частичного принятия ответа
                 try {
-                    // Проверяем, есть ли массив ответивших игроков
                     if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
-                        // Получаем последнего ответившего игрока
                         const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
 
-                        // Используем новый формат - new_points содержит обновленное количество очков
-                        if (payload.new_points !== undefined) {
-                            // Устанавливаем новое значение очков для последнего ответившего игрока
-                            setPlayerScore(lastPlayerNickname, payload.new_points)
-                            updateScoreDisplay(lastPlayerNickname, payload.new_points)
+                        setPlayerScore(lastPlayerNickname, payload.new_points)
+                        updateScoreDisplay(lastPlayerNickname, payload.new_points)
 
-                            // Обновляем таблицу лидеров, если она открыта
-                            const leaderboardModal = document.querySelector(".leaderboard-modal")
-                            if (leaderboardModal) {
-                                import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                    updateLeaderboardTable(leaderboardModal)
-                                })
-                            }
-
-                            // Показываем сообщение
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${lastPlayerNickname} частично принят! Теперь у него ${payload.new_points} очков`
-
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-                            }
+                        // Обновляем таблицу лидеров, если она открыта
+                        const leaderboardModal = document.querySelector(".leaderboard-modal")
+                        if (leaderboardModal) {
+                            import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+                                updateLeaderboardTable(leaderboardModal)
+                            })
                         }
-                    } else if (payload.nickname) {
-                        // Старый формат для обратной совместимости
-                        if (payload.new_points !== undefined) {
-                            // Устанавливаем новое значение очков
-                            setPlayerScore(payload.nickname, payload.new_points)
-                            updateScoreDisplay(payload.nickname, payload.new_points)
 
-                            // Обновляем таблицу лидеров, если она открыта
-                            const leaderboardModal = document.querySelector(".leaderboard-modal")
-                            if (leaderboardModal) {
-                                import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                    updateLeaderboardTable(leaderboardModal)
-                                })
-                            }
+                        const message = document.createElement("div")
+                        message.className = "system-message"
+                        message.textContent = `Ответ игрока ${lastPlayerNickname} частично принят! Теперь у него ${payload.new_points} очков`
 
-                            // Показываем сообщение
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${payload.nickname} частично принят! Теперь у него ${payload.new_points} очков`
+                        setTimeout(() => {
+                            message.style.opacity = "0"
+                            message.style.transition = "opacity 0.5s"
+                            setTimeout(() => message.remove(), 500)
+                        }, 3000)
 
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-                            }
+                        const answersContainer = document.getElementById("answers-container")
+                        if (answersContainer) {
+                            answersContainer.appendChild(message)
                         }
                     }
 
-                    // Если указан следующий выбирающий, обновляем его
                     if (payload.choosing_player) {
                         import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
-                            // Получаем ID игрока по никнейму
                             const choosingPlayerId = playerNicknameToId[payload.choosing_player]
                             if (choosingPlayerId) {
                                 setChoosingPlayerId(choosingPlayerId)
                             } else {
-                                // Если не нашли ID, используем никнейм как ID
                                 setChoosingPlayerId(payload.choosing_player)
                             }
                         })
                     }
 
-                    // Продолжаем воспроизведение для остальных игроков
                     if (currentAudioPlayer) {
                         currentAudioPlayer.play().catch((err) => console.log("Could not resume playback:", err))
                     }
@@ -415,54 +373,31 @@ function handleEvent(type, payload) {
                         // Получаем последнего ответившего игрока
                         const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
 
-                        // Используем новый формат - new_points содержит обновленное количество очков
-                        if (payload.new_points !== undefined) {
-                            // Устанавливаем новое значение очков для последнего ответившего игрока
-                            setPlayerScore(lastPlayerNickname, payload.new_points)
-                            updateScoreDisplay(lastPlayerNickname, payload.new_points)
+                        setPlayerScore(lastPlayerNickname, payload.new_points)
+                        updateScoreDisplay(lastPlayerNickname, payload.new_points)
 
-                            // Обновляем таблицу лидеров, если она открыта
-                            const leaderboardModal = document.querySelector(".leaderboard-modal")
-                            if (leaderboardModal) {
-                                import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                    updateLeaderboardTable(leaderboardModal)
-                                })
-                            }
-
-                            // Показываем сообщение
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${lastPlayerNickname} принят! Теперь у него ${payload.new_points} очков`
-
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-                            }
+                        // Обновляем таблицу лидеров, если она открыта
+                        const leaderboardModal = document.querySelector(".leaderboard-modal")
+                        if (leaderboardModal) {
+                            import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+                                updateLeaderboardTable(leaderboardModal)
+                            })
                         }
-                    } else if (payload.nickname) {
-                        // Старый формат для обратной совместимости
-                        if (payload.new_points !== undefined) {
-                            // Устанавливаем новое значение очков
-                            setPlayerScore(payload.nickname, payload.new_points)
-                            updateScoreDisplay(payload.nickname, payload.new_points)
 
-                            // Обновляем таблицу лидеров, если она открыта
-                            const leaderboardModal = document.querySelector(".leaderboard-modal")
-                            if (leaderboardModal) {
-                                import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                    updateLeaderboardTable(leaderboardModal)
-                                })
-                            }
+                        // Показываем сообщение
+                        const message = document.createElement("div")
+                        message.className = "system-message"
+                        message.textContent = `Ответ игрока ${lastPlayerNickname} принят! Теперь у него ${payload.new_points} очков`
 
-                            // Показываем сообщение
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${payload.nickname} принят! Теперь у него ${payload.new_points} очков`
+                        setTimeout(() => {
+                            message.style.opacity = "0"
+                            message.style.transition = "opacity 0.5s"
+                            setTimeout(() => message.remove(), 500)
+                        }, 3000)
 
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-                            }
+                        const answersContainer = document.getElementById("answers-container")
+                        if (answersContainer) {
+                            answersContainer.appendChild(message)
                         }
                     }
 
@@ -509,85 +444,31 @@ function handleEvent(type, payload) {
             // Обновляем обработчик события reject_answer
             case "reject_answer":
                 console.log("reject_answer", payload)
-                // Обработка отклонения ответа
                 try {
-                    // Проверяем, есть ли массив ответивших игроков
                     if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
-                        // Получаем последнего ответившего игрока
                         const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
 
-                        // Используем новый формат - new_points содержит обновленное количество очков
-                        if (payload.new_points !== undefined) {
-                            // Устанавливаем новое значение очков для последнего ответившего игрока
-                            setPlayerScore(lastPlayerNickname, payload.new_points)
-                            updateScoreDisplay(lastPlayerNickname, payload.new_points)
+                        setPlayerScore(lastPlayerNickname, payload.new_points)
+                        updateScoreDisplay(lastPlayerNickname, payload.new_points)
 
-                            // Обновляем таблицу лидеров, если она открыта
-                            const leaderboardModal = document.querySelector(".leaderboard-modal")
-                            if (leaderboardModal) {
-                                import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                    updateLeaderboardTable(leaderboardModal)
-                                })
-                            }
-
-                            // Показываем сообщение
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${lastPlayerNickname} отклонен! Теперь у него ${payload.new_points} очков`
-
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-                            }
-                        } else {
-                            // Если нет информации о новых очках, просто показываем сообщение
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${lastPlayerNickname} отклонен!`
-
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-                            }
+                        // Обновляем таблицу лидеров, если она открыта
+                        const leaderboardModal = document.querySelector(".leaderboard-modal")
+                        if (leaderboardModal) {
+                            import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+                                updateLeaderboardTable(leaderboardModal)
+                            })
                         }
-                    } else if (payload.nickname) {
-                        // Старый формат для обратной совместимости
-                        if (payload.new_points !== undefined) {
-                            // Устанавливаем новое значение очков
-                            setPlayerScore(payload.nickname, payload.new_points)
-                            updateScoreDisplay(payload.nickname, payload.new_points)
 
-                            // Обновляем таблицу лидеров, если она открыта
-                            const leaderboardModal = document.querySelector(".leaderboard-modal")
-                            if (leaderboardModal) {
-                                import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                    updateLeaderboardTable(leaderboardModal)
-                                })
-                            }
+                        const message = document.createElement("div")
+                        message.className = "system-message"
+                        message.textContent = `Ответ игрока ${lastPlayerNickname} отклонен! Теперь у него ${payload.new_points} очков`
 
-                            // Показываем сообщение
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${payload.nickname} отклонен! Теперь у него ${payload.new_points} очков`
-
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-                            }
-                        } else {
-                            // Если нет информации о новых очках, просто показываем сообщение
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${payload.nickname} отклонен!`
-
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-                            }
+                        const answersContainer = document.getElementById("answers-container")
+                        if (answersContainer) {
+                            answersContainer.appendChild(message)
                         }
                     }
 
-                    // Продолжаем воспроизведение для остальных игроков
                     if (currentAudioPlayer) {
                         currentAudioPlayer.play().catch((err) => console.log("Could not resume playback:", err))
                     }

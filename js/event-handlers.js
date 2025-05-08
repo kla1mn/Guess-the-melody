@@ -22,6 +22,7 @@ import {
     currentPlayerId,
 } from "./game-state.js"
 import {showWaiting, addPlaylistLink, createRoom, joinRoom, startGame} from "./ui-manager.js"
+import {BACKEND} from "./config.js";
 
 // Setup all event handlers
 function setupEventHandlers() {
@@ -81,6 +82,29 @@ function setupEventHandlers() {
         clearState()
     })
 
+    document.getElementById("logout-btn")?.addEventListener("click", async () => {
+        try {
+            const res = await fetch(`${BACKEND}/game_app/delete_token`, {
+                method: "GET",
+                credentials: "include",
+            })
+
+            if (res.ok) {
+                console.log("Токен успешно удален")
+
+                clearState()
+
+                window.location.reload()
+            } else {
+                console.error("Ошибка при удалении токена:", res.status)
+                alert("Ошибка при выходе из игры. Попробуйте еще раз.")
+            }
+        } catch (error) {
+            console.error("Ошибка при выходе из игры:", error)
+            alert("Ошибка при выходе из игры. Проверьте соединение с сервером.")
+        }
+    })
+
     // Add playlist link button
     addLinkBtn?.addEventListener("click", async () => {
         if (linkAdded) {
@@ -94,7 +118,7 @@ function setupEventHandlers() {
     // Обновляем обработчик кнопки старта игры
     // Start game button (host only)
     startBtn?.addEventListener("click", () => {
-        startGame();
+        startGame(socket);
     })
 
     // Добавляем обработчик стандартного события submit, чтобы предотвратить перезагрузку страницы
@@ -146,5 +170,7 @@ function setupEventHandlers() {
         })
     })
 }
+
+
 
 export { setupEventHandlers }

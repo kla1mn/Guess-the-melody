@@ -172,15 +172,23 @@ function clearState() {
     console.log("Cleared saved state from localStorage")
 }
 
-// Проверка, является ли текущий игрок выбирающим
+// Improve the isChoosingPlayer function to be more robust
 function isChoosingPlayer() {
     console.log("Checking if current player is choosing:", {
         currentNick,
-        currentPlayerId,
-        choosingPlayerId,
-        result: Number(currentPlayerId) === choosingPlayerId,
+        currentPlayerId: currentPlayerId,
+        choosingPlayerId: choosingPlayerId,
+        currentPlayerIdType: typeof currentPlayerId,
+        choosingPlayerIdType: typeof choosingPlayerId,
     })
-    return Number(currentPlayerId) === choosingPlayerId
+
+    // Handle null or undefined values
+    if (!currentPlayerId || !choosingPlayerId) {
+        return false
+    }
+
+    // Convert both IDs to strings for comparison to avoid type mismatches
+    return String(currentPlayerId) === String(choosingPlayerId)
 }
 
 // Получение никнейма по ID игрока
@@ -210,7 +218,7 @@ function updatePlayerScore(nickname, points) {
     if (!playersScores[nickname]) {
         playersScores[nickname] = 0
     }
-    playersScores[nickname] = points
+    playersScores[nickname] += points
     saveState()
 }
 

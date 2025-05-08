@@ -1,11 +1,13 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Угадай Мелодию</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="css/answers.css">
+    <link rel="stylesheet" href="css/leaderboard.css">
 </head>
 <body>
 <!-- Начальный экран -->
@@ -56,6 +58,9 @@
 
 <!-- Аудио плеер -->
 <audio id="audio-player" controls class="hidden"></audio>
+
+<!-- Кнопка выхода из игры -->
+<button id="logout-btn" class="logout-btn">Выйти из игры</button>
 
 <script type="module" src="js/main.js"></script>
 </body>

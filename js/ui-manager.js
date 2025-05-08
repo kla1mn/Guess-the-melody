@@ -9,7 +9,7 @@ import {
     addLinkBtn,
     startBtn,
     answerForm,
-    answersContainer
+    answersContainer,
 } from "./dom-elements.js"
 import {
     currentCode,
@@ -48,26 +48,32 @@ function showWaiting() {
 function showGame(categories) {
     console.log("Showing game screen with categories:", categories)
 
-    initScreen.classList.add("hidden")
-    joinScreen.classList.add("hidden")
-    waitingScreen.classList.add("hidden")
-    gameScreen.classList.remove("hidden")
-
     // Устанавливаем флаг, что игра началась
     setGameStarted(true)
 
     // Сохраняем категории
     setGameCategories(categories)
 
-    // Рендерим категории
-    if (categories) {
-        renderCategories(categories)
-    }
+    // Hide answer form for host
+    import("./game-state.js").then(({ isHost }) => {
+        if (isHost) {
+            answerForm.classList.add("hidden")
+            answersContainer.classList.remove("hidden")
+        }
+    })
 
-    if (isHost) {
-        answerForm.classList.add("disabled");
-        answersContainer.classList.remove("hidden");
-    }
+    // Рендерим категории после небольшой задержки, чтобы убедиться, что все состояние загружено
+    setTimeout(() => {
+        if (categories) {
+            renderCategories(categories)
+        }
+    }, 100)
+
+    // Показываем игровой экран
+    initScreen.classList.add("hidden")
+    joinScreen.classList.add("hidden")
+    waitingScreen.classList.add("hidden")
+    gameScreen.classList.remove("hidden")
 
     // Подключаемся к WebSocket, если еще не подключены
     connectWebSocket()

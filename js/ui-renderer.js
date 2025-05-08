@@ -79,7 +79,7 @@ function removePlayerFromList(nickname) {
     })
 }
 
-// Обновляем функцию renderCategories, чтобы использовать ID игрока
+// Modify the renderCategories function to better handle the isChoosing check
 function renderCategories(categories) {
     console.log("Rendering categories:", categories)
     categoriesCt.innerHTML = "" // очистить предыдущее
@@ -92,7 +92,7 @@ function renderCategories(categories) {
         return
     }
 
-    // Добавляем нопку для показа таблицы лидеров
+    // Добавляем кнопку для показа таблицы лидеров
     const leaderboardBtn = document.createElement("button")
     leaderboardBtn.textContent = "Таблица лидеров"
     leaderboardBtn.className = "leaderboard-btn"
@@ -123,30 +123,46 @@ function renderCategories(categories) {
     infoEl.id = "game-info"
     infoEl.className = "game-info"
 
-    const isChoosing = isChoosingPlayer()
-    console.log("Current player is choosing:", isChoosing)
+    // Получаем актуальное значение isChoosingPlayer() и другие данные
+    import("./game-state.js").then(({ isChoosingPlayer, choosingPlayerId, getNicknameById, currentPlayerId }) => {
+        const isChoosing = isChoosingPlayer()
+        console.log(
+            "Current player is choosing:",
+            isChoosing,
+            "currentPlayerId:",
+            currentPlayerId,
+            "choosingPlayerId:",
+            choosingPlayerId,
+        )
 
-    if (isChoosing) {
-        infoEl.innerHTML = `<p>Вы выбираете мелодию. Выберите категорию и мелодию.</p>`
-    } else {
-        // Импортируем choosingPlayerId для отображения имени
-        import("./game-state.js").then(({choosingPlayerId, getNicknameById}) => {
-            // Находим никнейм игрока по ID
+        if (isChoosing) {
+            infoEl.innerHTML = `<p>Вы выбираете категорию и мелодию.</p>`
+        } else {
             const choosingPlayerName = getNicknameById(choosingPlayerId)
             infoEl.innerHTML = `<p>Игрок ${choosingPlayerName} выбирает мелодию...</p>`
+        }
+
+        categoriesCt.appendChild(infoEl)
+
+        // Проверяем, нужно ли показывать категории
+        import("./game-state.js").then(({ isHost }) => {
+            if (isChoosing || isHost) {
+                console.log("Showing categories for choosing player or host")
+                renderCategoryCards(categories)
+            } else {
+                console.log("Not showing categories - player is not choosing and not host")
+            }
         })
-    }
+    })
+}
 
-    categoriesCt.appendChild(infoEl)
-
-    if (isChoosing || isHost)
-    {
-        console.log("Showing categories for choosing player or host")
-        categories.forEach((cat) => {
+// Extract the category rendering logic to a separate function
+function renderCategoryCards(categories) {
+    categories.forEach((cat) => {
         const card = document.createElement("div")
         card.className = "category-card"
         // на свой вкус можно подставить фон по имени категории
-        card.style.backgroundImage = `url('/images/${cat.category_name}.jpg')`
+        card.style.backgroundImage = `url('/images/${cat.category_name}.png')`
 
         const title = document.createElement("h3")
         title.textContent = cat.category_name
@@ -174,24 +190,26 @@ function renderCategories(categories) {
                 btn.addEventListener("click", () => {
                     console.log("Melody button clicked:", m)
                     // Используем правильный тип события - pick_melody
-                    if (socket && (isChoosing || isHost)) {
-                        const message = {
-                            type: "pick_melody", // Используем type вместо event_type
-                            payload: {
-                                category: cat.category_name,
-                                melody: m.name || `Мелодия ${m.points}`,
-                                points: m.points,
-                                link: m.link,
-                            },
-                        }
-                        console.log("Sending message:", message)
-                        socket.send(JSON.stringify(message))
+                    import("./game-state.js").then(({ socket, isChoosingPlayer, isHost }) => {
+                        if (socket && (isChoosingPlayer() || isHost)) {
+                            const message = {
+                                type: "pick_melody", // Используем type вместо event_type
+                                payload: {
+                                    category: cat.category_name,
+                                    melody: m.name || `Мелодия ${m.points}`,
+                                    points: m.points,
+                                    link: m.link,
+                                },
+                            }
+                            console.log("Sending message:", message)
+                            socket.send(JSON.stringify(message))
 
-                        // Отмечаем мелодию как сыгранную
-                        m.is_guessed = true
-                        btn.disabled = true
-                        btn.style.opacity = "0.5"
-                    }
+                            // Отмечаем мелодию как сыгранную
+                            m.is_guessed = true
+                            btn.disabled = true
+                            btn.style.opacity = "0.5"
+                        }
+                    })
                 })
                 btns.appendChild(btn)
             })
@@ -200,75 +218,46 @@ function renderCategories(categories) {
         card.appendChild(btns)
         categoriesCt.appendChild(card)
     })
-    }
 }
 
-// Улучшаем функцию playMelody для решения проблемы с автовоспроизведением
-function playMelody(link, startTime, endTime) {
+let onTimeUpdate
+
+function playMelody(link, startTime = 0, maxDuration = 30) {
     if (!link) {
         console.error("No link provided for melody playback")
         return
     }
 
-    console.log("Playing melody:", link)
-
-    // Используем существующий аудио-элемент из HTML
     const audioPlayer = document.getElementById("audio-player")
-    audioPlayer.src = link
-    audioPlayer.classList.remove("hidden")
+    // Если до этого вешали listener, его нужно снять
+    if (onTimeUpdate) {
+        audioPlayer.removeEventListener("timeupdate", onTimeUpdate)
+    }
 
-    // Сохраняем ссылку на аудио-плеер
+    audioPlayer.src = link
+    audioPlayer.currentTime = startTime
+    audioPlayer.classList.remove("hidden")
     setCurrentAudioPlayer(audioPlayer)
 
-    // Ограничиваем воспроизведение 30 секундами
-    setTimeout(() => {
-        audioPlayer.pause()
-    }, 30 * 1000)
-
-    // Показываем интерфейс для ответов только для не-хоста
+    // Показываем интерфейс для ответов только не-хосту
     if (!isHost) {
         showAnswerInterface()
     }
 
-    // Создаем кнопку для воспроизведения в менее заметном месте
-    const playButton = document.createElement("button")
-    playButton.textContent = "▶️ Играть"
-    playButton.style.position = "fixed"
-    playButton.style.top = "10px"
-    playButton.style.right = "10px"
-    playButton.style.zIndex = "1000"
-    playButton.style.padding = "5px 10px"
-    playButton.style.backgroundColor = "#4CAF50"
-    playButton.style.color = "white"
-    playButton.style.border = "none"
-    playButton.style.borderRadius = "5px"
-    playButton.style.cursor = "pointer"
-    playButton.style.fontSize = "12px"
-    playButton.id = "play-melody-button"
-
-    // Удаляем существующую кнопку, если она есть
-    const existingButton = document.getElementById("play-melody-button")
-    if (existingButton) {
-        existingButton.remove()
+    // Вешаем новый обработчик timeupdate
+    onTimeUpdate = () => {
+        // Как только дойдём до границы, останавливаем и снимаем listener
+        if (audioPlayer.currentTime >= startTime + maxDuration) {
+            audioPlayer.pause()
+            audioPlayer.removeEventListener("timeupdate", onTimeUpdate)
+            onTimeUpdate = null
+        }
     }
+    audioPlayer.addEventListener("timeupdate", onTimeUpdate)
 
-    playButton.onclick = () => {
-        audioPlayer
-            .play()
-            .then(() => {
-                console.log("Audio playback started successfully")
-            })
-            .catch((error) => {
-                console.error("Error playing audio:", error)
-                alert("Не удалось воспроизвести аудио. Проверьте настройки браузера.")
-            })
-    }
-
-    document.body.appendChild(playButton)
-
-    // Пробуем воспроизвести автоматически (может не сработать из-за политик браузера)
+    // Пробуем включить автоматически
     audioPlayer.play().catch((error) => {
-        console.log("Auto-play prevented by browser, user needs to click the play button:", error)
+        console.log("Auto-play prevented by browser:", error)
     })
 }
 
@@ -314,7 +303,7 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
     // Показываем контейнер ответов
     showAnswersContainer()
 
-    // Добавляем игрока в список ответивших
+    // ��обавляем игрока в список ответивших
     addPlayerToAnswered(nickname)
 
     // Если текущий игрок ответил, скрываем форму ответа
@@ -468,8 +457,10 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
     answersContainer.scrollTop = answersContainer.scrollHeight
 }
 
-// Изменяем функцию updateScoreDisplay, чтобы обновлять таблицу лидеров
+// Обновляем функцию updateScoreDisplay, чтобы обновлять таблицу лидеров
 function updateScoreDisplay(nickname, points) {
+    console.log("Updating score display for", nickname, "with points", points)
+
     const playerItems = Array.from(playersListEl.children)
 
     for (const item of playerItems) {
@@ -478,14 +469,8 @@ function updateScoreDisplay(nickname, points) {
             const isHostText = item.textContent.includes("(хост)") ? " (хост)" : ""
             const isChoosingText = item.textContent.includes("(выбирает мелодию)") ? " (выбирает мелодию)" : ""
 
-            // Проверяем, началась ли игра
-            import("./game-state.js").then(({ gameStarted }) => {
-                if (gameStarted) {
-                    item.textContent = `${nickname}${isHostText}${isChoosingText} - ${points} очков`
-                } else {
-                    item.textContent = `${nickname}${isHostText}${isChoosingText}`
-                }
-            })
+            // Всегда показываем очки, независимо от статуса игры
+            item.textContent = `${nickname}${isHostText}${isChoosingText} - ${points} очков`
             break
         }
     }

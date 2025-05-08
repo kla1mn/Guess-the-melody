@@ -1,0 +1,77 @@
+/* leaderboard.css - Стили для таблицы лидеров */
+/* Стили для кнопки таблицы лидеров */
+.leaderboard-btn {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    padding: 8px 16px;
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    width: auto;
+}
+
+/* Стили для модального окна таблицы лидеров */
+.leaderboard-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.leaderboard-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 400px;
+    width: 80%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.leaderboard-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.leaderboard-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard-container th,
+.leaderboard-container td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.leaderboard-container th {
+    border-bottom: 2px solid #ddd;
+}
+
+.leaderboard-container tr:nth-child(1) {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.leaderboard-container tr:nth-child(2) {
+    color: #c0c0c0;
+    font-weight: bold;
+}
+
+.leaderboard-container tr:nth-child(3) {
+    color: #cd7f32;
+    font-weight: bold;
+}
