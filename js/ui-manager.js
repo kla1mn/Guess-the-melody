@@ -23,7 +23,6 @@ import {
 import { connectWebSocket } from "./websocket-manager.js"
 import { renderCategories } from "./ui-renderer.js"
 
-// Show waiting screen
 function showWaiting() {
     console.log("Showing waiting screen with code:", currentCode, "nick:", currentNick, "isHost:", isHost)
 
@@ -44,17 +43,10 @@ function showWaiting() {
     connectWebSocket()
 }
 
-// Show game screen
 function showGame(categories) {
     console.log("Showing game screen with categories:", categories)
-
-    // Устанавливаем флаг, что игра началась
     setGameStarted(true)
-
-    // Сохраняем категории
     setGameCategories(categories)
-
-    // Hide answer form for host
     import("./game-state.js").then(({ isHost }) => {
         if (isHost) {
             answerForm.classList.add("hidden")
@@ -62,24 +54,20 @@ function showGame(categories) {
         }
     })
 
-    // Рендерим категории после небольшой задержки, чтобы убедиться, что все состояние загружено
     setTimeout(() => {
         if (categories) {
             renderCategories(categories)
         }
     }, 100)
 
-    // Показываем игровой экран
     initScreen.classList.add("hidden")
     joinScreen.classList.add("hidden")
     waitingScreen.classList.add("hidden")
     gameScreen.classList.remove("hidden")
 
-    // Подключаемся к WebSocket, если еще не подключены
     connectWebSocket()
 }
 
-// Add playlist link
 async function addPlaylistLink(link) {
     if (!link) {
         return alert("Введите ссылку")
@@ -119,7 +107,6 @@ async function addPlaylistLink(link) {
     }
 }
 
-// Create a new game room
 async function createRoom(nickname) {
     if (!nickname) return alert("Введите никнейм")
 
@@ -137,9 +124,8 @@ async function createRoom(nickname) {
     }
 }
 
-// Join an existing game room
 async function joinRoom(nickname, code) {
-    if (!nickname || !code) {
+    if (!nickname && !code) {
         return alert("Введите ник и код комнаты")
     } else if (!nickname) {
         return alert("Введите ник")
@@ -169,7 +155,6 @@ async function joinRoom(nickname, code) {
     }
 }
 
-// Start the game (host only)
 function startGame(socket) {
     if (!socket) return
 

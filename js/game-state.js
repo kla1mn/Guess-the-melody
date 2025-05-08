@@ -7,7 +7,6 @@ let linkAdded = false
 let gameStarted = false
 let gameCategories = null
 
-// Игровые переменные
 let currentMelody = null
 let choosingPlayerId = null // ID игрока, который выбирает мелодию
 let currentAnswer = null // Правильный ответ на текущую мелодию
@@ -15,11 +14,9 @@ let playersScores = {}
 let playersAnswered = [] // Игроки, которые уже ответили в текущем раунде
 let currentAudioPlayer = null
 
-// Добавляем маппинг ID игроков к их никнеймам
 let playerIdToNickname = {}
 let playerNicknameToId = {}
 
-// Добавляем переменную для хранения ID текущего игрока
 let currentPlayerId = null
 
 // Load saved state from localStorage
@@ -92,12 +89,10 @@ function loadSavedState() {
             currentPlayerId,
         })
 
-        // Если игра уже началась, показываем игровой экран
         if (gameStarted && gameCategories) {
             console.log("Game already started, showing game screen")
             showGame(gameCategories)
         } else {
-            // Иначе показываем экран ожидания
             console.log("Game not started, showing waiting screen")
             showWaiting()
         }
@@ -108,7 +103,6 @@ function loadSavedState() {
     return false
 }
 
-// Save current state to localStorage
 function saveState() {
     localStorage.setItem("guessthemelody_code", currentCode)
     localStorage.setItem("guessthemelody_nick", currentNick)
@@ -158,7 +152,6 @@ function saveState() {
     })
 }
 
-// Clear saved state
 function clearState() {
     localStorage.removeItem("guessthemelody_code")
     localStorage.removeItem("guessthemelody_nick")
@@ -175,7 +168,6 @@ function clearState() {
     console.log("Cleared saved state from localStorage")
 }
 
-// Improve the isChoosingPlayer function to be more robust
 function isChoosingPlayer() {
     console.log("Checking if current player is choosing:", {
         currentNick,
@@ -185,70 +177,50 @@ function isChoosingPlayer() {
         choosingPlayerIdType: typeof choosingPlayerId,
     })
 
-    // Handle null or undefined values
     if (!currentPlayerId || !choosingPlayerId) {
         return false
     }
 
-    // Convert both IDs to strings for comparison to avoid type mismatches
     return String(currentPlayerId) === String(choosingPlayerId)
 }
 
-// Получение никнейма по ID игрока
 function getNicknameById(id) {
     return playerIdToNickname[id] || id
 }
 
-// Проверка, ответил ли уже игрок в текущем раунде
 function hasPlayerAnswered() {
     return playersAnswered.includes(currentNick)
 }
 
-// Сбросить список ответивших игроков для нового раунда
 function resetAnsweredPlayers() {
     playersAnswered = []
 }
 
-// Добавить игрока в список ответивших
 function addPlayerToAnswered(nickname) {
     if (!playersAnswered.includes(nickname)) {
         playersAnswered.push(nickname)
     }
 }
 
-// Обновить счет игрока
-function updatePlayerScore(nickname, points) {
-    if (!playersScores[nickname]) {
-        playersScores[nickname] = 0
-    }
-    playersScores[nickname] += points
-    saveState()
-}
 
-// Установить счет игрока
 function setPlayerScore(nickname, points) {
     playersScores[nickname] = points
     saveState()
 }
 
-// Установить счет всех игроков
 function setAllPlayersScores(scores) {
     playersScores = { ...scores }
     saveState()
 }
 
-// Получить отсортированный список игроков по очкам
 function getSortedPlayersByScore() {
-    // Фильтруем хоста, если текущий игрок - хост
     const filteredScores = { ...playersScores }
 
-    // Возвращаем отсортированный список
     return Object.entries(filteredScores)
         .map(([nickname, score]) => ({ nickname, score }))
         .sort((a, b) => b.score - a.score)
 }
 
-// Обновить маппинг ID игроков к никнеймам
 function updatePlayerMappings(players) {
     players.forEach((player) => {
         if (player.id && player.nickname) {
@@ -259,7 +231,6 @@ function updatePlayerMappings(players) {
     saveState()
 }
 
-// Импортируем функции для использования в loadSavedState
 import { showWaiting, showGame } from "./ui-manager.js"
 
 export {
@@ -286,14 +257,12 @@ export {
     hasPlayerAnswered,
     resetAnsweredPlayers,
     addPlayerToAnswered,
-    updatePlayerScore,
     setPlayerScore,
     setAllPlayersScores,
     getSortedPlayersByScore,
     updatePlayerMappings,
 }
 
-// Allow these to be modified from other modules
 export function setSocket(newSocket) {
     socket = newSocket
 }
@@ -342,7 +311,6 @@ export function setCurrentAudioPlayer(player) {
     currentAudioPlayer = player
 }
 
-// Добавляем функцию для установки ID текущего игрока
 export function setCurrentPlayerId(id) {
     currentPlayerId = id
     saveState()

@@ -1,13 +1,10 @@
-// DOM element references
 // Screens
 const initScreen = document.getElementById("init-screen")
 const joinScreen = document.getElementById("join-screen")
 const waitingScreen = document.getElementById("waiting-screen")
 const gameScreen = document.getElementById("game-screen")
 const categoriesCt = document.getElementById("categories-container")
-const audioPlayer = document.getElementById("audio-player")
 const answersContainer = document.getElementById("answers-container")
-const playOverlay = document.getElementById("play-overlay")
 const answerForm = document.getElementById("answer-form")
 
 // Inputs
@@ -31,9 +28,7 @@ export {
     waitingScreen,
     gameScreen,
     categoriesCt,
-    audioPlayer,
     answersContainer,
-    playOverlay,
     answerForm,
     initNickInput,
     joinNickInput,

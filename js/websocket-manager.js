@@ -16,7 +16,7 @@ import {
 import { renderPlayersList, playMelody, updateScoreDisplay, clearAnswersContainer } from "./ui-renderer.js"
 import { showGame } from "./ui-manager.js"
 
-let socket // Declare socket here
+let socket
 
 function connectWebSocket() {
     console.log("Connecting to WebSocket...")
@@ -64,21 +64,16 @@ function handleEvent(type, payload) {
 
     try {
         switch (type) {
-            // Обновляем обработчик события init, чтобы сохранять ID игрока и очки
             case "init":
                 console.log("init event with payload:", payload)
 
-                // Сохраняем код комнаты и никнейм текущего игрока
                 setCurrentCode(payload.invite_code)
                 setCurrentNick(payload.current_player_nickname)
                 document.getElementById("room-code").textContent = payload.invite_code
 
-                // Сохраняем список игроков и их ID
                 if (payload.players && Array.isArray(payload.players)) {
-                    // Обновляем маппинг ID игроков к никнеймам
                     updatePlayerMappings(payload.players)
 
-                    // Инициализируем очки игроков
                     const initialScores = {}
                     payload.players.forEach((player) => {
                         if (player.nickname) {
@@ -87,32 +82,26 @@ function handleEvent(type, payload) {
                     })
                     setAllPlayersScores(initialScores)
 
-                    // Рендерим список игроков
                     renderPlayersList(payload.players)
                 }
 
-                // Находим текущего игрока в списке и сохраняем его ID
                 const currentPlayer = payload.players.find((p) => p.nickname === payload.current_player_nickname)
                 if (currentPlayer && currentPlayer.id) {
                     console.log("Setting current player ID:", currentPlayer.id)
                     setCurrentPlayerId(currentPlayer.id.toString())
                 }
 
-                // Проверяем, есть ли информация о выбирающем игроке в state_info
                 if (payload.state_info && payload.state_info.choosing_player_id) {
                     console.log("Setting choosing player from init event:", payload.state_info.choosing_player_id)
                     setChoosingPlayerId(payload.state_info.choosing_player_id)
 
-                    // Если есть информация о текущем ответе, сохраняем его
                     if (payload.state_info.answer) {
                         setCurrentAnswer(payload.state_info.answer)
                     }
 
-                    // Если игра уже началась, устанавливаем флаг
                     if (payload.state_info.game_started) {
                         setGameStarted(true)
 
-                        // Если есть категории, показываем игровой экран
                         if (payload.categories) {
                             showGame(payload.categories)
                         }
@@ -122,12 +111,9 @@ function handleEvent(type, payload) {
 
             case "new_player":
                 console.log("new_player")
-                // Обновляем маппинг ID игроков к никнеймам
                 if (payload.id && payload.nickname) {
                     updatePlayerMappings([{ id: payload.id, nickname: payload.nickname, points: 0 }])
                 }
-
-                // Добавляем игрока в список
                 import("./ui-renderer.js").then(({ addPlayerToList }) => {
                     addPlayerToList(payload.nickname, payload.is_master, payload.id)
                 })
@@ -139,41 +125,28 @@ function handleEvent(type, payload) {
                 })
                 break
 
-            // Обработчик события start_game
             case "start_game":
                 console.log("start_game received with payload:", payload)
 
-                // Показываем кнопку выхода из игры
                 document.getElementById("logout-btn").classList.remove("hidden")
 
-                // Устанавливаем игрока, который выбирает мелодию
                 if (payload.state_info && payload.state_info.choosing_player_id) {
-                    // Получаем ID игрока, который выбирает мелодию
                     const choosingPlayerId = payload.state_info.choosing_player_id
 
-                    // Сохраняем ID выбирающего игрока
                     import("./game-state.js").then(
                         ({ setChoosingPlayerId, setCurrentAnswer, getNicknameById, currentNick, currentPlayerId }) => {
-                            // Сохраняем ID
                             setChoosingPlayerId(choosingPlayerId)
 
                             console.log("Setting choosing player ID:", choosingPlayerId, "Current player ID:", currentPlayerId)
 
-                            // Если есть информация о текущем ответе, сохраняем его
                             if (payload.state_info.answer) {
                                 setCurrentAnswer(payload.state_info.answer)
                             }
 
-                            // Показываем игровой экран и сохраняем состояние ПОСЛЕ установки всех необходимых данных
                             showGame(payload.categories)
-
-                            // Сбрасываем список ответивших игроков для нового раунда
                             resetAnsweredPlayers()
-
-                            // Очищаем контейнер ответов
                             clearAnswersContainer()
 
-                            // Обновляем интерфейс для отображения выбирающего игрока
                             setTimeout(() => {
                                 const infoEl = document.getElementById("game-info")
                                 if (infoEl) {
@@ -185,7 +158,6 @@ function handleEvent(type, payload) {
                                     }
                                 }
 
-                                // Перерисовываем категории после установки всех данных
                                 import("./ui-renderer.js").then(({ renderCategories }) => {
                                     import("./game-state.js").then(({ gameCategories }) => {
                                         renderCategories(gameCategories)
@@ -195,33 +167,24 @@ function handleEvent(type, payload) {
                         },
                     )
                 } else {
-                    // Если нет информации о выбирающем игроке, просто показываем игровой экран
                     showGame(payload.categories)
                     resetAnsweredPlayers()
                     clearAnswersContainer()
                 }
                 break
 
-            // Обработчик события pick_melody
             case "pick_melody":
                 console.log("pick_melody received:", payload)
 
-                // Сбрасываем список ответивших игроков для нового раунда
                 resetAnsweredPlayers()
-                // Очищаем контейнер ответов
                 clearAnswersContainer()
 
                 if (payload.link) {
                     console.log("Playing melody from pick_melody event:", payload.link)
-
-                    // Сохраняем информацию о текущей мелодии
                     import("./game-state.js").then(({ setCurrentAnswer, setCurrentMelody }) => {
-                        // Сохраняем ответ
                         if (payload.melody) {
                             setCurrentAnswer(payload.melody)
                         }
-
-                        // Сохраняем всю информацию о мелодии
                         setCurrentMelody({
                             name: payload.melody || "",
                             link: payload.link,
@@ -230,19 +193,15 @@ function handleEvent(type, payload) {
                         })
                     })
 
-                    // Только хост автоматически воспроизводит мелодию
                     import("./game-state.js").then(({ isHost, currentNick, isChoosingPlayer }) => {
                         if (isHost) {
-                            // Ограничиваем воспроизведение 30 секундами
                             playMelody(payload.link)
                         } else {
-                            // Для остальных игроков (кроме выбирающего) показываем кнопку "Ответить"
                             const answerForm = document.getElementById("answer-form")
                             if (answerForm) {
                                 answerForm.classList.remove("hidden")
                             }
 
-                            // Показываем сообщение о том, что мелодия воспроизводится
                             const infoEl = document.getElementById("game-info")
                             if (infoEl) {
                                 infoEl.innerHTML = `<p>Мелодия воспроизводится у хоста. Введите ваш ответ!</p>`
@@ -254,18 +213,14 @@ function handleEvent(type, payload) {
                 }
                 break
 
-            // Обработчик события answer
             case "answer":
                 console.log("answer event received with full payload:", payload)
 
-                // Отображение ответа игрока
                 if (payload.answering_player_nickname && payload.answer) {
-                    // Останавливаем воспроизведение музыки, если это хост
                     import("./game-state.js").then(({ isHost, currentAudioPlayer }) => {
                         if (isHost && currentAudioPlayer) {
                             currentAudioPlayer.pause()
 
-                            // Показываем уведомление о полученном ответе
                             const notification = document.createElement("div")
                             notification.className = "answer-notification"
                             notification.textContent = `Получен ответ от ${payload.answering_player_nickname}!`
@@ -283,7 +238,6 @@ function handleEvent(type, payload) {
                             notification.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)"
                             document.body.appendChild(notification)
 
-                            // Удаляем уведомление через 2 секунды
                             setTimeout(() => {
                                 notification.style.opacity = "0"
                                 notification.style.transition = "opacity 0.5s"
@@ -292,16 +246,10 @@ function handleEvent(type, payload) {
                         }
                     })
 
-                    // Добавляем ответ в интерфейс немедленно
                     import("./ui-renderer.js").then(({ addPlayerAnswer, showAnswersContainer }) => {
                         import("./game-state.js").then(({ addPlayerToAnswered }) => {
-                            // Добавляем игрока в список ответивших
                             addPlayerToAnswered(payload.answering_player_nickname)
-
-                            // Показываем контейнер ответов
                             showAnswersContainer()
-
-                            // Добавляем ответ в интерфейс
                             console.log(
                                 "Calling addPlayerAnswer with:",
                                 payload.answering_player_nickname,
@@ -323,7 +271,6 @@ function handleEvent(type, payload) {
                         setPlayerScore(lastPlayerNickname, payload.new_points)
                         updateScoreDisplay(lastPlayerNickname, payload.new_points)
 
-                        // Обновляем таблицу лидеров, если она открыта
                         const leaderboardModal = document.querySelector(".leaderboard-modal")
                         if (leaderboardModal) {
                             import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
@@ -331,7 +278,6 @@ function handleEvent(type, payload) {
                             })
                         }
 
-                        // Проверяем, нет ли уже сообщения об этом ответе
                         const existingMessages = document.querySelectorAll(".system-message")
                         let isDuplicate = false
                         existingMessages.forEach((msg) => {
@@ -340,7 +286,6 @@ function handleEvent(type, payload) {
                             }
                         })
 
-                        // Добавляем сообщение только если оно не дублируется
                         if (!isDuplicate) {
                             const message = document.createElement("div")
                             message.className = "system-message"
@@ -350,7 +295,6 @@ function handleEvent(type, payload) {
                             if (answersContainer) {
                                 answersContainer.appendChild(message)
 
-                                // Удаляем сообщение через 3 секунды
                                 setTimeout(() => {
                                     message.style.opacity = "0"
                                     message.style.transition = "opacity 0.5s"
@@ -379,20 +323,15 @@ function handleEvent(type, payload) {
                 }
                 break
 
-            // Обновляем обработчик события accept_answer
             case "accept_answer":
                 console.log("accept_answer", payload)
-                // Обработка полного принятия ответа
                 try {
-                    // Проверяем, есть ли массив ответивших игроков
                     if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
-                        // Получаем последнего ответившего игрока
                         const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
 
                         setPlayerScore(lastPlayerNickname, payload.new_points)
                         updateScoreDisplay(lastPlayerNickname, payload.new_points)
 
-                        // Обновляем таблицу лидеров, если она открыта
                         const leaderboardModal = document.querySelector(".leaderboard-modal")
                         if (leaderboardModal) {
                             import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
@@ -400,7 +339,6 @@ function handleEvent(type, payload) {
                             })
                         }
 
-                        // Проверяем, нет ли уже сообщения об этом ответе
                         const existingMessages = document.querySelectorAll(".system-message")
                         let isDuplicate = false
                         existingMessages.forEach((msg) => {
@@ -409,7 +347,6 @@ function handleEvent(type, payload) {
                             }
                         })
 
-                        // Добавляем сообщение только если оно не дублируется
                         if (!isDuplicate) {
                             const message = document.createElement("div")
                             message.className = "system-message"
@@ -419,7 +356,6 @@ function handleEvent(type, payload) {
                             if (answersContainer) {
                                 answersContainer.appendChild(message)
 
-                                // Удаляем сообщение через 3 секунды
                                 setTimeout(() => {
                                     message.style.opacity = "0"
                                     message.style.transition = "opacity 0.5s"
@@ -429,19 +365,15 @@ function handleEvent(type, payload) {
                         }
                     }
 
-                    // Если указан следующий выбирающий, обновляем его
                     if (payload.choosing_player) {
                         import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
-                            // Получаем ID игрока по никнейму
                             const choosingPlayerId = playerNicknameToId[payload.choosing_player]
                             if (choosingPlayerId) {
                                 setChoosingPlayerId(choosingPlayerId)
                             } else {
-                                // Если не нашли ID, используем никнейм как ID
                                 setChoosingPlayerId(payload.choosing_player)
                             }
 
-                            // Показываем сообщение о новом выбирающем
                             const nextMessage = document.createElement("div")
                             nextMessage.className = "system-message"
                             nextMessage.textContent = `Игрок ${payload.choosing_player} выбирает следующую мелодию`
@@ -450,7 +382,6 @@ function handleEvent(type, payload) {
                             if (answersContainer) {
                                 answersContainer.appendChild(nextMessage)
 
-                                // Удаляем сообщение через 3 секунды
                                 setTimeout(() => {
                                     nextMessage.style.opacity = "0"
                                     nextMessage.style.transition = "opacity 0.5s"
@@ -458,7 +389,6 @@ function handleEvent(type, payload) {
                                 }, 3000)
                             }
 
-                            // Обновляем интерфейс для нового раунда
                             import("./ui-renderer.js").then(({ renderCategories }) => {
                                 import("./game-state.js").then(({ gameCategories }) => {
                                     renderCategories(gameCategories)
@@ -467,7 +397,6 @@ function handleEvent(type, payload) {
                         })
                     }
 
-                    // Останавливаем воспроизведение музыки при правильном ответе
                     if (currentAudioPlayer) {
                         currentAudioPlayer.pause()
                     }
@@ -476,7 +405,6 @@ function handleEvent(type, payload) {
                 }
                 break
 
-            // Обновляем обработчик события reject_answer
             case "reject_answer":
                 console.log("reject_answer", payload)
                 try {
@@ -486,7 +414,6 @@ function handleEvent(type, payload) {
                         setPlayerScore(lastPlayerNickname, payload.new_points)
                         updateScoreDisplay(lastPlayerNickname, payload.new_points)
 
-                        // Обновляем таблицу лидеров, если она открыта
                         const leaderboardModal = document.querySelector(".leaderboard-modal")
                         if (leaderboardModal) {
                             import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
@@ -494,7 +421,6 @@ function handleEvent(type, payload) {
                             })
                         }
 
-                        // Проверяем, нет ли уже сообщения об этом ответе
                         const existingMessages = document.querySelectorAll(".system-message")
                         let isDuplicate = false
                         existingMessages.forEach((msg) => {
@@ -503,7 +429,6 @@ function handleEvent(type, payload) {
                             }
                         })
 
-                        // Добавляем сообщение только если оно не дублируется
                         if (!isDuplicate) {
                             const message = document.createElement("div")
                             message.className = "system-message"
@@ -513,7 +438,6 @@ function handleEvent(type, payload) {
                             if (answersContainer) {
                                 answersContainer.appendChild(message)
 
-                                // Удаляем сообщение через 3 секунды
                                 setTimeout(() => {
                                     message.style.opacity = "0"
                                     message.style.transition = "opacity 0.5s"

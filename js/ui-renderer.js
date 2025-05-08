@@ -72,7 +72,7 @@ function removePlayerFromList(nickname) {
 
 function renderCategories(categories) {
     console.log("Rendering categories:", categories)
-    categoriesCt.innerHTML = "" // очистить предыдущее
+    categoriesCt.innerHTML = ""
 
     if (!categories || categories.length === 0) {
         console.error("No categories to render")
@@ -141,7 +141,6 @@ function renderCategories(categories) {
     })
 }
 
-// Обновляем функцию setCategoryBackground для лучшего отображения фоновых изображений
 function setCategoryBackground(card, categoryName) {
     const desired = `/images/${categoryName}.png`
     const fallback = `/images/unknown.png`
@@ -158,7 +157,6 @@ function setCategoryBackground(card, categoryName) {
     img.src = desired
 }
 
-// Обновляем функцию renderCategoryCards для улучшенного отображения
 function renderCategoryCards(categories) {
     categories.forEach((cat) => {
         const card = document.createElement("div")
