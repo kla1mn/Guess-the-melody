@@ -65,8 +65,8 @@ function handleEvent(type, payload) {
     try {
         switch (type) {
             case "heartbeat":
-                alert('heartbeat');
-                break;
+                alert('heartbeat')
+                break
             case "init":
                 console.log("init event with payload:", payload)
 
