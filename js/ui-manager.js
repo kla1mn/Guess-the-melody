@@ -37,7 +37,7 @@ function showWaiting() {
     else startBtn.classList.add("hidden")
 
     waitingScreen.classList.remove("hidden")
-    gameScreen.classList.add("hidden") // Убедимся, что игровой экран скрыт
+    gameScreen.classList.add("hidden")
 
     saveState()
     connectWebSocket()

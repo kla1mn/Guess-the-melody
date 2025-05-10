@@ -171,7 +171,10 @@ function handleEvent(type, payload) {
 
                             showGame(payload.categories)
                             resetAnsweredPlayers()
-                            clearAnswersContainer()
+
+                            import("./ui-renderer.js").then(({ clearAnswersContainer }) => {
+                                clearAnswersContainer()
+                            })
 
                             import("./ui-renderer.js").then(({ initializeLeaderboard }) => {
                                 initializeLeaderboard()
@@ -182,9 +185,9 @@ function handleEvent(type, payload) {
                                 if (infoEl) {
                                     const choosingPlayerNickname = getNicknameById(choosingPlayerId)
                                     if (String(currentPlayerId) === String(choosingPlayerId)) {
-                                        infoEl.innerHTML = `<p>Вы выбираете категорию и мелодию.</p>`
+                                        infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
                                     } else {
-                                        infoEl.innerHTML = `<p>Игрок ${choosingPlayerNickname} выбирает мелодию...</p>`
+                                        infoEl.innerHTML = `<p>${choosingPlayerNickname} выбирает мелодию...</p>`
                                     }
                                 }
 
@@ -199,7 +202,10 @@ function handleEvent(type, payload) {
                 } else {
                     showGame(payload.categories)
                     resetAnsweredPlayers()
-                    clearAnswersContainer()
+
+                    import("./ui-renderer.js").then(({ clearAnswersContainer }) => {
+                        clearAnswersContainer()
+                    })
 
                     import("./ui-renderer.js").then(({ initializeLeaderboard }) => {
                         initializeLeaderboard()
@@ -298,79 +304,8 @@ function handleEvent(type, payload) {
 
             case "accept_answer_partially":
                 console.log(`Event: ${type}`)
-                try {
-                    if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
-                        const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
-
-                        setPlayerScore(lastPlayerNickname, payload.new_points)
-                        updateScoreDisplay(lastPlayerNickname, payload.new_points)
-
-                        // Always update the leaderboard when scores change
-                        import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                            updateLeaderboardTable()
-                        })
-
-                        const existingMessages = document.querySelectorAll(".system-message")
-                        let isDuplicate = false
-                        existingMessages.forEach((msg) => {
-                            if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} частично принят!`)) {
-                                isDuplicate = true
-                            }
-                        })
-
-                        if (!isDuplicate) {
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${lastPlayerNickname} частично принят! Теперь у него ${payload.new_points} очков`
-
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-
-                                setTimeout(() => {
-                                    message.style.opacity = "0"
-                                    message.style.transition = "opacity 0.5s"
-                                    setTimeout(() => message.remove(), 500)
-                                }, 3000)
-                            }
-                        }
-                    }
-                    import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
-                        const choosingPlayerId = playerNicknameToId[payload.choosing_player]
-                        if (choosingPlayerId) {
-                            setChoosingPlayerId(choosingPlayerId)
-                        } else {
-                            setChoosingPlayerId(payload.choosing_player)
-                        }
-
-                        const nextMessage = document.createElement("div")
-                        nextMessage.className = "system-message"
-                        nextMessage.textContent = `Игрок ${payload.choosing_player} выбирает следующую мелодию`
-
-                        const answersContainer = document.getElementById("answers-container")
-                        if (answersContainer) {
-                            answersContainer.appendChild(nextMessage)
-
-                            setTimeout(() => {
-                                nextMessage.style.opacity = "0"
-                                nextMessage.style.transition = "opacity 0.5s"
-                                setTimeout(() => nextMessage.remove(), 500)
-                            }, 3000)
-                        }
-                    })
-
-                    if (currentAudioPlayer) {
-                        currentAudioPlayer.play().catch((err) => console.log("Could not resume playback:", err))
-                    }
-                } catch (error) {
-                    console.error("Error in accept_answer_partially handler:", error)
-                }
-                break
-
-            case "accept_answer":
-                console.log(`Event: ${type}`)
-                try {
-                    const lastPlayerNickname = payload.choosing_player
+                if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
+                    const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
 
                     setPlayerScore(lastPlayerNickname, payload.new_points)
                     updateScoreDisplay(lastPlayerNickname, payload.new_points)
@@ -382,7 +317,7 @@ function handleEvent(type, payload) {
                     const existingMessages = document.querySelectorAll(".system-message")
                     let isDuplicate = false
                     existingMessages.forEach((msg) => {
-                        if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} принят!`)) {
+                        if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} частично принят!`)) {
                             isDuplicate = true
                         }
                     })
@@ -390,7 +325,7 @@ function handleEvent(type, payload) {
                     if (!isDuplicate) {
                         const message = document.createElement("div")
                         message.className = "system-message"
-                        message.textContent = `Ответ игрока ${lastPlayerNickname} принят! Теперь у него ${payload.new_points} очков`
+                        message.textContent = `Ответ игрока ${lastPlayerNickname} частично принят! Теперь у него ${payload.new_points} очков`
 
                         const answersContainer = document.getElementById("answers-container")
                         if (answersContainer) {
@@ -403,17 +338,43 @@ function handleEvent(type, payload) {
                             }, 3000)
                         }
                     }
-                    import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
-                        const choosingPlayerId = playerNicknameToId[payload.choosing_player]
-                        if (choosingPlayerId) {
-                            setChoosingPlayerId(choosingPlayerId)
-                        } else {
-                            setChoosingPlayerId(payload.choosing_player)
+                }
+                import("./game-state.js").then(
+                    ({ setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId }) => {
+                        const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
+
+                        const choosingPlayerChanged = String(currentChoosingPlayerId) !== String(newChoosingPlayerId)
+
+                        setChoosingPlayerId(newChoosingPlayerId)
+
+                        if (choosingPlayerChanged) {
+                            console.log("Choosing player changed, updating UI")
+                            setTimeout(() => {
+                                const infoEl = document.getElementById("game-info")
+                                if (infoEl) {
+                                    import("./game-state.js").then(({ isChoosingPlayer, getNicknameById, choosingPlayerId }) => {
+                                        if (isChoosingPlayer()) {
+                                            infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
+                                        } else {
+                                            const choosingPlayerName = getNicknameById(choosingPlayerId)
+                                            infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
+                                        }
+                                    })
+                                }
+                            }, 300)
+
+                            setTimeout(() => {
+                                import("./ui-renderer.js").then(({ renderCategories }) => {
+                                    import("./game-state.js").then(({ gameCategories }) => {
+                                        renderCategories(gameCategories)
+                                    })
+                                })
+                            }, 500)
                         }
 
                         const nextMessage = document.createElement("div")
                         nextMessage.className = "system-message"
-                        nextMessage.textContent = `Игрок ${payload.choosing_player} выбирает следующую мелодию`
+                        nextMessage.textContent = `${payload.choosing_player} выбирает следующую мелодию`
 
                         const answersContainer = document.getElementById("answers-container")
                         if (answersContainer) {
@@ -425,14 +386,104 @@ function handleEvent(type, payload) {
                                 setTimeout(() => nextMessage.remove(), 500)
                             }, 3000)
                         }
-                    })
+                    },
+                )
 
-                    if (currentAudioPlayer) {
-                        currentAudioPlayer.pause()
-                    }
-                } catch (error) {
-                    console.error("Error in accept_answer handler:", error)
+                if (currentAudioPlayer) {
+                    currentAudioPlayer.play().catch((err) => console.log("Could not resume playback:", err))
                 }
+
+                break
+
+            case "accept_answer":
+                console.log(`Event: ${type}`)
+                const lastPlayerNickname = payload.choosing_player
+
+                setPlayerScore(lastPlayerNickname, payload.new_points)
+                updateScoreDisplay(lastPlayerNickname, payload.new_points)
+
+                import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+                    updateLeaderboardTable()
+                })
+
+                const existingMessages = document.querySelectorAll(".system-message")
+                let isDuplicate = false
+                existingMessages.forEach((msg) => {
+                    if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} принят!`)) {
+                        isDuplicate = true
+                    }
+                })
+
+                if (!isDuplicate) {
+                    const message = document.createElement("div")
+                    message.className = "system-message"
+                    message.textContent = `Ответ игрока ${lastPlayerNickname} принят! Теперь у него ${payload.new_points} очков`
+
+                    const answersContainer = document.getElementById("answers-container")
+                    if (answersContainer) {
+                        answersContainer.appendChild(message)
+
+                        setTimeout(() => {
+                            message.style.opacity = "0"
+                            message.style.transition = "opacity 0.5s"
+                            setTimeout(() => message.remove(), 500)
+                        }, 3000)
+                    }
+                }
+                import("./game-state.js").then(
+                    ({ setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId }) => {
+                        const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
+
+                        const choosingPlayerChanged = String(currentChoosingPlayerId) !== String(newChoosingPlayerId)
+
+                        setChoosingPlayerId(newChoosingPlayerId)
+
+                        if (choosingPlayerChanged) {
+                            console.log("Choosing player changed, updating UI")
+                            setTimeout(() => {
+                                const infoEl = document.getElementById("game-info")
+                                if (infoEl) {
+                                    import("./game-state.js").then(({ isChoosingPlayer, getNicknameById, choosingPlayerId }) => {
+                                        if (isChoosingPlayer()) {
+                                            infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
+                                        } else {
+                                            const choosingPlayerName = getNicknameById(choosingPlayerId)
+                                            infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
+                                        }
+                                    })
+                                }
+                            }, 300)
+
+                            setTimeout(() => {
+                                import("./ui-renderer.js").then(({ renderCategories }) => {
+                                    import("./game-state.js").then(({ gameCategories }) => {
+                                        renderCategories(gameCategories)
+                                    })
+                                })
+                            }, 500)
+                        }
+
+                        const nextMessage = document.createElement("div")
+                        nextMessage.className = "system-message"
+                        nextMessage.textContent = `${payload.choosing_player} выбирает следующую мелодию`
+
+                        const answersContainer = document.getElementById("answers-container")
+                        if (answersContainer) {
+                            answersContainer.appendChild(nextMessage)
+
+                            setTimeout(() => {
+                                nextMessage.style.opacity = "0"
+                                nextMessage.style.transition = "opacity 0.5s"
+                                setTimeout(() => nextMessage.remove(), 500)
+                            }, 3000)
+                        }
+                    },
+                )
+
+                if (currentAudioPlayer) {
+                    currentAudioPlayer.pause()
+                }
+
                 break
 
             case "reject_answer":
@@ -473,29 +524,55 @@ function handleEvent(type, payload) {
                             }
                         }
                     }
-                    import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
-                        const choosingPlayerId = playerNicknameToId[payload.choosing_player]
-                        if (choosingPlayerId) {
-                            setChoosingPlayerId(choosingPlayerId)
-                        } else {
-                            setChoosingPlayerId(payload.choosing_player)
-                        }
+                    import("./game-state.js").then(
+                        ({ setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId }) => {
+                            const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
 
-                        const nextMessage = document.createElement("div")
-                        nextMessage.className = "system-message"
-                        nextMessage.textContent = `Игрок ${payload.choosing_player} выбирает следующую мелодию`
+                            const choosingPlayerChanged = String(currentChoosingPlayerId) !== String(newChoosingPlayerId)
 
-                        const answersContainer = document.getElementById("answers-container")
-                        if (answersContainer) {
-                            answersContainer.appendChild(nextMessage)
+                            setChoosingPlayerId(newChoosingPlayerId)
 
-                            setTimeout(() => {
-                                nextMessage.style.opacity = "0"
-                                nextMessage.style.transition = "opacity 0.5s"
-                                setTimeout(() => nextMessage.remove(), 500)
-                            }, 3000)
-                        }
-                    })
+                            if (choosingPlayerChanged) {
+                                console.log("Choosing player changed, updating UI")
+                                setTimeout(() => {
+                                    const infoEl = document.getElementById("game-info")
+                                    if (infoEl) {
+                                        import("./game-state.js").then(({ isChoosingPlayer, getNicknameById, choosingPlayerId }) => {
+                                            if (isChoosingPlayer()) {
+                                                infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
+                                            } else {
+                                                const choosingPlayerName = getNicknameById(choosingPlayerId)
+                                                infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
+                                            }
+                                        })
+                                    }
+                                }, 300)
+
+                                setTimeout(() => {
+                                    import("./ui-renderer.js").then(({ renderCategories }) => {
+                                        import("./game-state.js").then(({ gameCategories }) => {
+                                            renderCategories(gameCategories)
+                                        })
+                                    })
+                                }, 500)
+                            }
+
+                            const nextMessage = document.createElement("div")
+                            nextMessage.className = "system-message"
+                            nextMessage.textContent = `${payload.choosing_player} выбирает следующую мелодию`
+
+                            const answersContainer = document.getElementById("answers-container")
+                            if (answersContainer) {
+                                answersContainer.appendChild(nextMessage)
+
+                                setTimeout(() => {
+                                    nextMessage.style.opacity = "0"
+                                    message.style.transition = "opacity 0.5s"
+                                    setTimeout(() => nextMessage.remove(), 500)
+                                }, 3000)
+                            }
+                        },
+                    )
                     if (currentAudioPlayer) {
                         currentAudioPlayer.play().catch((err) => console.log("Could not resume playback:", err))
                     }

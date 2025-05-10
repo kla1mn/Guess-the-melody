@@ -8,10 +8,10 @@ let gameStarted = false
 let gameCategories = null
 
 let currentMelody = null
-let choosingPlayerId = null // ID игрока, который выбирает мелодию
-let currentAnswer = null // Правильный ответ на текущую мелодию
+let choosingPlayerId = null
+let currentAnswer = null
 let playersScores = {}
-let playersAnswered = [] // Игроки, которые уже ответили в текущем раунде
+let playersAnswered = []
 let currentAudioPlayer = null
 
 let playerIdToNickname = {}
@@ -276,7 +276,7 @@ export function setCurrentCode(code) {
 
 export function setIsHost(host) {
     isHost = host
-    saveState() // Save state to persist the host change
+    saveState()
 }
 
 export function setLinkAdded(added) {

@@ -6,7 +6,6 @@ function init() {
 
     setupEventHandlers()
 
-    // Set up leaderboard close button event with direct implementation
     const closeLeaderboardBtn = document.getElementById("close-leaderboard-btn")
     if (closeLeaderboardBtn) {
         closeLeaderboardBtn.addEventListener("click", () => {
@@ -19,7 +18,6 @@ function init() {
         })
     }
 
-    // Set up leaderboard modal background click with direct implementation
     const leaderboardModal = document.getElementById("leaderboard-modal")
     if (leaderboardModal) {
         leaderboardModal.addEventListener("click", (e) => {

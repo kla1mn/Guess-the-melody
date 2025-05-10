@@ -88,16 +88,15 @@ function setupEventHandlers() {
 
             if (res.ok) {
                 console.log("Токен успешно удален")
-                document.getElementById("logout-btn").classList.add("hidden")
-                clearState()
-                window.location.reload()
             } else {
-                console.error("Ошибка при удалении токена:", res.status)
-                alert("Ошибка при выходе из игры. Попробуйте еще раз.")
+                console.log("Токен не удален, возможно уже истек:", res.status)
             }
         } catch (error) {
-            console.error("Ошибка при выходе из игры:", error)
-            alert("Ошибка при выходе из игры. Проверьте соединение с сервером.")
+            console.log("Ошибка при удалении токена, возможно он уже истек:", error)
+        } finally {
+            document.getElementById("logout-btn").classList.add("hidden")
+            clearState()
+            window.location.reload()
         }
     })
 
@@ -115,7 +114,7 @@ function setupEventHandlers() {
     })
 
     answerForm?.addEventListener("submit", (e) => {
-        e.preventDefault() // Предотвращаем стандартное поведение формы
+        e.preventDefault()
         console.log("Form submit prevented")
 
         const answerEvent = new Event("answer")
@@ -154,7 +153,6 @@ function setupEventHandlers() {
         })
     })
 
-    // Replace the close leaderboard button event handler
     document.getElementById("close-leaderboard-btn")?.addEventListener("click", () => {
         console.log("Close leaderboard button clicked")
         const leaderboardModal = document.getElementById("leaderboard-modal")
@@ -164,7 +162,6 @@ function setupEventHandlers() {
         }
     })
 
-    // Replace the leaderboard modal background click event handler
     document.getElementById("leaderboard-modal")?.addEventListener("click", (e) => {
         if (e.target === document.getElementById("leaderboard-modal")) {
             console.log("Leaderboard background clicked")

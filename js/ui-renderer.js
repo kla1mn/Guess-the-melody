@@ -19,7 +19,6 @@ function renderPlayersList(players) {
             const li = document.createElement("li")
             li.className = "player-list-item"
 
-            // Create a container for player info
             const playerInfo = document.createElement("span")
             playerInfo.textContent = p.nickname + (p.is_master ? " (хост)" : "")
             li.appendChild(playerInfo)
@@ -39,7 +38,6 @@ function renderPlayersList(players) {
                 }
             })
 
-            // Add transfer host button if current user is host and this is not the host
             if (isHost && !p.is_master && !gameStarted && p.nickname !== currentNick) {
                 const transferBtn = document.createElement("button")
                 transferBtn.textContent = "Сделать хостом"
@@ -61,7 +59,6 @@ function addPlayerToList(nickname, isMaster = false, playerId = null) {
     const li = document.createElement("li")
     li.className = "player-list-item"
 
-    // Create a container for player info
     const playerInfo = document.createElement("span")
     playerInfo.textContent = nickname + (isMaster ? " (хост)" : "")
     li.appendChild(playerInfo)
@@ -75,7 +72,6 @@ function addPlayerToList(nickname, isMaster = false, playerId = null) {
             playerInfo.textContent += ` - ${playersScores[nickname]} очков`
         }
 
-        // Add transfer host button if current user is host and this is not the host
         if (isHost && !isMaster && !gameStarted && nickname !== currentNick) {
             const transferBtn = document.createElement("button")
             transferBtn.textContent = "Сделать хостом"
@@ -146,35 +142,27 @@ function renderCategories(categories) {
     const infoEl = document.createElement("div")
     infoEl.id = "game-info"
     infoEl.className = "game-info"
+    categoriesCt.appendChild(infoEl)
 
-    import("./game-state.js").then(({ isChoosingPlayer, choosingPlayerId, getNicknameById, currentPlayerId }) => {
+    import("./game-state.js").then(({ isHost, isChoosingPlayer, choosingPlayerId, getNicknameById }) => {
         const isChoosing = isChoosingPlayer()
-        console.log(
-            "Current player is choosing:",
-            isChoosing,
-            "currentPlayerId:",
-            currentPlayerId,
-            "choosingPlayerId:",
-            choosingPlayerId,
-        )
+        console.log("Current player is choosing:", isChoosing, "choosingPlayerId:", choosingPlayerId)
 
         if (isChoosing) {
-            infoEl.innerHTML = `<p>Вы выбираете категорию и мелодию.</p>`
+            infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
         } else {
             const choosingPlayerName = getNicknameById(choosingPlayerId)
-            infoEl.innerHTML = `<p>Игрок ${choosingPlayerName} выбирает мелодию...</p>`
+            infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
         }
 
-        categoriesCt.appendChild(infoEl)
-
-        import("./game-state.js").then(({ isHost }) => {
-            if (isChoosing || isHost) {
-                console.log("Showing categories for choosing player or host")
-                renderCategoryCards(categories)
-            } else {
-                console.log("Not showing categories - player is not choosing and not host")
-            }
-        })
+        if (isChoosing || isHost) {
+            console.log("Showing categories for choosing player or host")
+            renderCategoryCards(categories)
+        } else {
+            console.log("Not showing categories - player is not choosing and not host")
+            const categoryCards = categoriesCt.querySelectorAll(".category-card")
+            categoryCards.forEach((card) => card.remove())
+        }
     })
 }
 
@@ -309,10 +297,29 @@ function hideAnswerInterface() {
     }
 }
 
+function clearAnswersContainer() {
+    const answersContainer = document.getElementById("answers-container")
+    if (answersContainer) {
+        answersContainer.style.opacity = "0"
+        answersContainer.style.transition = "opacity 0.3s"
+
+        setTimeout(() => {
+            answersContainer.innerHTML = ""
+            answersContainer.classList.add("hidden")
+            answersContainer.style.opacity = "1"
+        }, 300)
+    }
+}
+
 function showAnswersContainer() {
     const answersContainer = document.getElementById("answers-container")
     if (answersContainer) {
-        answersContainer.classList.remove("hidden")
+        if (answersContainer.children.length > 0) {
+            answersContainer.classList.remove("hidden")
+            answersContainer.style.opacity = "1"
+        } else {
+            answersContainer.classList.add("hidden")
+        }
     }
 }
 
@@ -325,7 +332,8 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
         return
     }
 
-    showAnswersContainer()
+    answersContainer.classList.remove("hidden")
+    answersContainer.style.opacity = "1"
 
     addPlayerToAnswered(nickname)
 
@@ -371,6 +379,18 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
             correctAnswerEl.className = "correct-answer"
             correctAnswerEl.textContent = `Правильный ответ: ${correctAnswer}`
             answerElement.appendChild(correctAnswerEl)
+
+            setTimeout(() => {
+                if (correctAnswerEl && correctAnswerEl.parentNode) {
+                    correctAnswerEl.style.opacity = "0"
+                    correctAnswerEl.style.transition = "opacity 0.5s"
+                    setTimeout(() => {
+                        if (correctAnswerEl && correctAnswerEl.parentNode) {
+                            correctAnswerEl.remove()
+                        }
+                    }, 500)
+                }
+            }, 3000)
         }
 
         const buttonsContainer = document.createElement("div")
@@ -469,16 +489,7 @@ function updateScoreDisplay(nickname, points) {
         }
     }
 
-    // Always update the leaderboard when a score changes
     updateLeaderboardTable()
-}
-
-function clearAnswersContainer() {
-    const answersContainer = document.getElementById("answers-container")
-    if (answersContainer) {
-        answersContainer.innerHTML = ""
-        answersContainer.classList.add("hidden")
-    }
 }
 
 function updateLeaderboardTable() {
@@ -533,14 +544,11 @@ function showLeaderboard() {
     const leaderboardModal = document.getElementById("leaderboard-modal")
 
     if (leaderboardModal) {
-        // Make sure we have data before showing
         updateLeaderboardTable()
 
-        // Check if we have any rows
         const tbody = document.getElementById("leaderboard-tbody")
         if (tbody && tbody.children.length === 0) {
             console.log("No leaderboard data available")
-            // Add a placeholder row if no data
             const row = document.createElement("tr")
             const cell = document.createElement("td")
             cell.colSpan = 3
@@ -551,7 +559,6 @@ function showLeaderboard() {
             tbody.appendChild(row)
         }
 
-        // Show the leaderboard
         leaderboardModal.classList.remove("hidden")
         leaderboardModal.style.display = "flex"
     } else {
