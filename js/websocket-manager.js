@@ -19,40 +19,36 @@ import { showGame } from "./ui-manager.js"
 let socket
 
 function connectWebSocket() {
-    console.log("Connecting to WebSocket...")
+    console.log("Подключение к вебсокету...")
     socket = new WebSocket(WS_BACKEND)
 
     socket.addEventListener("open", () => {
-        console.log("WS: connected successfully")
+        console.log("WS: подключено успешно")
     })
 
     socket.addEventListener("message", (event) => {
-        console.log("WS: received message", event.data)
         let msg
         try {
             msg = JSON.parse(event.data)
+            console.log(`Получено: ${msg.payload}`)
         } catch (e) {
             console.error("WS: некорректный JSON", event.data, e)
             return
         }
 
-        console.log("Received raw message:", msg)
-
-        let eventType, payload
-
-        if (msg.type && msg.payload) {
-            eventType = msg.type
-            payload = msg.payload
-        } else {
-            console.error("Неизвестный формат сообщения:", msg)
-            return
-        }
+        let eventType = msg.type
+        let payload = msg.payload
 
         handleEvent(eventType, payload)
     })
 
     socket.addEventListener("error", (e) => {
-        console.error("WS error", e)
+        console.error("WS: ошибка", e)
+    })
+
+    socket.addEventListener("close", () => {
+        console.log("WS: закрытие соединения")
+        //TODO переподключаться
     })
 
     setSocket(socket)
@@ -60,56 +56,44 @@ function connectWebSocket() {
 }
 
 function handleEvent(type, payload) {
-    console.log("Handling event:", type, payload)
-
     try {
         switch (type) {
-            // Add this case to the existing switch statement
             case "transfer_master":
-                console.log("transfer_master event received:", payload)
-                if (payload.nickname) {
-                    import("./game-state.js").then(({ currentNick, setIsHost }) => {
-                        const isNewHost = payload.nickname === currentNick
-                        setIsHost(isNewHost)
+                console.log(`Event: ${type}`)
+                import("./game-state.js").then(({ currentNick, setIsHost }) => {
+                    const isNewHost = payload.nickname === currentNick
+                    setIsHost(isNewHost)
 
-                        // Update UI elements based on new host status
-                        const startBtn = document.getElementById("start-btn")
-                        if (startBtn) {
-                            startBtn.classList.toggle("hidden", !isNewHost)
-                        }
+                    const startBtn = document.getElementById("start-btn")
+                    startBtn.classList.toggle("hidden", !isNewHost)
 
-                        // Get all players from the list and update their host status
-                        const playersListEl = document.getElementById("players-list")
-                        if (playersListEl) {
-                            const players = []
-                            Array.from(playersListEl.children).forEach((li) => {
-                                // Extract nickname from the first child (span) to avoid button text
-                                const playerSpan = li.querySelector("span")
-                                let nickname = playerSpan ? playerSpan.textContent.split(" (")[0] : li.textContent.split(" (")[0]
+                    const playersListEl = document.getElementById("players-list")
+                    if (playersListEl) {
+                        const players = []
+                        Array.from(playersListEl.children).forEach((li) => {
+                            const playerSpan = li.querySelector("span")
+                            let nickname = playerSpan ? playerSpan.textContent.split(" (")[0] : li.textContent.split(" (")[0]
 
-                                // Clean up any trailing spaces
-                                nickname = nickname.trim()
+                            nickname = nickname.trim()
 
-                                const playerId = li.dataset.playerId
-                                players.push({
-                                    nickname,
-                                    is_master: nickname === payload.nickname,
-                                    id: playerId,
-                                })
+                            const playerId = li.dataset.playerId
+                            players.push({
+                                nickname,
+                                is_master: nickname === payload.nickname,
+                                id: playerId,
                             })
+                        })
 
-                            // Clear and re-render the entire player list
-                            playersListEl.innerHTML = ""
-                            import("./ui-renderer.js").then(({ renderPlayersList }) => {
-                                renderPlayersList(players)
-                            })
-                        }
-                    })
-                }
+                        playersListEl.innerHTML = ""
+                        import("./ui-renderer.js").then(({ renderPlayersList }) => {
+                            renderPlayersList(players)
+                        })
+                    }
+                })
                 break
 
             case "init":
-                console.log("init event with payload:", payload)
+                console.log(`Event: ${type}`)
 
                 setCurrentCode(payload.invite_code)
                 setCurrentNick(payload.current_player_nickname)
@@ -154,7 +138,7 @@ function handleEvent(type, payload) {
                 break
 
             case "new_player":
-                console.log("new_player")
+                console.log(`Event: ${type}`)
                 if (payload.id && payload.nickname) {
                     updatePlayerMappings([{ id: payload.id, nickname: payload.nickname, points: 0 }])
                 }
@@ -164,14 +148,14 @@ function handleEvent(type, payload) {
                 break
 
             case "user_left":
+                console.log(`Event: ${type}`)
                 import("./ui-renderer.js").then(({ removePlayerFromList }) => {
                     removePlayerFromList(payload.nickname)
                 })
                 break
 
             case "start_game":
-                console.log("start_game received with payload:", payload)
-
+                console.log(`Event: ${type}`)
                 document.getElementById("logout-btn").classList.remove("hidden")
 
                 if (payload.state_info && payload.state_info.choosing_player_id) {
@@ -218,7 +202,7 @@ function handleEvent(type, payload) {
                 break
 
             case "pick_melody":
-                console.log("pick_melody received:", payload)
+                console.log(`Event: ${type}`)
 
                 resetAnsweredPlayers()
                 clearAnswersContainer()
@@ -258,7 +242,7 @@ function handleEvent(type, payload) {
                 break
 
             case "answer":
-                console.log("answer event received with full payload:", payload)
+                console.log(`Event: ${type}`)
 
                 if (payload.answering_player_nickname && payload.answer) {
                     import("./game-state.js").then(({ isHost, currentAudioPlayer }) => {
@@ -307,7 +291,7 @@ function handleEvent(type, payload) {
                 break
 
             case "accept_answer_partially":
-                console.log("accept_answer_partially", payload)
+                console.log(`Event: ${type}`)
                 try {
                     if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
                         const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
@@ -368,7 +352,7 @@ function handleEvent(type, payload) {
                 break
 
             case "accept_answer":
-                console.log("accept_answer", payload)
+                console.log(`Event: ${type}`)
                 try {
                     if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
                         const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
@@ -450,7 +434,7 @@ function handleEvent(type, payload) {
                 break
 
             case "reject_answer":
-                console.log("reject_answer", payload)
+                console.log(`Event: ${type}`)
                 try {
                     if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
                         const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
@@ -500,7 +484,7 @@ function handleEvent(type, payload) {
                 break
 
             case "exception":
-                console.log("exception", payload)
+                console.log(`Event: ${type}`)
                 if (payload.message === "The game has already begun") {
                     alert("Потерпи, игра уже началась")
 
@@ -520,14 +504,13 @@ function handleEvent(type, payload) {
     }
 }
 
-// Add the transferHost function to export at the end of the file
 function transferHost(nickname) {
     if (!socket) {
-        console.error("Socket not connected")
+        console.error("Сокет не подключен")
         return
     }
 
-    console.log("Transferring host to:", nickname)
+    console.log("Новый хост - ", nickname)
     socket.send(
         JSON.stringify({
             type: "transfer_master",

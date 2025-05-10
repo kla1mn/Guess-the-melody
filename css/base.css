@@ -88,7 +88,6 @@ button#start-btn:hover {
     background-color: #6dd293;
 }
 
-/* Стили для кнопки выхода из игры */
 .logout-btn {
     position: fixed;
     top: 20px;
@@ -101,12 +100,16 @@ button#start-btn:hover {
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
-    width: auto;
+    width: 154px;
+    height: auto;
     font-weight: 600;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s, transform 0.1s;
 }
 
 .logout-btn:hover {
     background-color: #ed6b8e;
+    transform: translateY(-2px);
 }
 
 #players-list {
