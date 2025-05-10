@@ -61,7 +61,7 @@ function loadSavedState() {
             if (savedCurrentPlayerId) {
                 currentPlayerId = savedCurrentPlayerId
             }
-            if (gameStarted){
+            if (gameStarted) {
                 document.getElementById("logout-btn").classList.remove("hidden")
             }
         } catch (e) {
@@ -202,7 +202,6 @@ function addPlayerToAnswered(nickname) {
     }
 }
 
-
 function setPlayerScore(nickname, points) {
     playersScores[nickname] = points
     saveState()
@@ -277,6 +276,7 @@ export function setCurrentCode(code) {
 
 export function setIsHost(host) {
     isHost = host
+    saveState() // Save state to persist the host change
 }
 
 export function setLinkAdded(added) {

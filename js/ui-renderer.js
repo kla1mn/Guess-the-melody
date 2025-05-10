@@ -13,49 +13,86 @@ import { playersListEl, categoriesCt } from "./dom-elements.js"
 
 function renderPlayersList(players) {
     playersListEl.innerHTML = ""
-    players.forEach((p) => {
-        const li = document.createElement("li")
-        li.textContent = p.nickname + (p.is_master ? " (хост)" : "")
 
-        if (p.id) {
-            li.dataset.playerId = p.id.toString()
-        }
+    import("./game-state.js").then(({ isHost, currentNick, gameStarted }) => {
+        players.forEach((p) => {
+            const li = document.createElement("li")
+            li.className = "player-list-item"
 
-        import("./game-state.js").then(({ gameStarted }) => {
+            // Create a container for player info
+            const playerInfo = document.createElement("span")
+            playerInfo.textContent = p.nickname + (p.is_master ? " (хост)" : "")
+            li.appendChild(playerInfo)
+
+            if (p.id) {
+                li.dataset.playerId = p.id.toString()
+            }
+
             if (gameStarted && playersScores[p.nickname] !== undefined) {
-                li.textContent += ` - ${playersScores[p.nickname]} очков`
+                playerInfo.textContent += ` - ${playersScores[p.nickname]} очков`
             }
-        })
 
-        import("./game-state.js").then(({ choosingPlayerId }) => {
-            if (p.id && p.id.toString() === choosingPlayerId) {
-                li.classList.add("choosing-player")
-                li.textContent += " (выбирает мелодию)"
+            import("./game-state.js").then(({ choosingPlayerId }) => {
+                if (p.id && p.id.toString() === choosingPlayerId) {
+                    li.classList.add("choosing-player")
+                    playerInfo.textContent += " (выбирает мелодию)"
+                }
+            })
+
+            // Add transfer host button if current user is host and this is not the host
+            if (isHost && !p.is_master && !gameStarted && p.nickname !== currentNick) {
+                const transferBtn = document.createElement("button")
+                transferBtn.textContent = "Сделать хостом"
+                transferBtn.className = "transfer-host-btn"
+                transferBtn.onclick = () => {
+                    import("./websocket-manager.js").then(({ transferHost }) => {
+                        transferHost(p.nickname)
+                    })
+                }
+                li.appendChild(transferBtn)
             }
-        })
 
-        playersListEl.appendChild(li)
+            playersListEl.appendChild(li)
+        })
     })
 }
 
 function addPlayerToList(nickname, isMaster = false, playerId = null) {
     const li = document.createElement("li")
-    li.textContent = nickname + (isMaster ? " (хост)" : "")
+    li.className = "player-list-item"
+
+    // Create a container for player info
+    const playerInfo = document.createElement("span")
+    playerInfo.textContent = nickname + (isMaster ? " (хост)" : "")
+    li.appendChild(playerInfo)
 
     if (playerId) {
         li.dataset.playerId = playerId.toString()
     }
 
-    import("./game-state.js").then(({ gameStarted }) => {
+    import("./game-state.js").then(({ gameStarted, playersScores, isHost, currentNick }) => {
         if (gameStarted && playersScores[nickname] !== undefined) {
-            li.textContent += ` - ${playersScores[nickname]} очков`
+            playerInfo.textContent += ` - ${playersScores[nickname]} очков`
+        }
+
+        // Add transfer host button if current user is host and this is not the host
+        if (isHost && !isMaster && !gameStarted && nickname !== currentNick) {
+            const transferBtn = document.createElement("button")
+            transferBtn.textContent = "Сделать хостом"
+            transferBtn.className = "transfer-host-btn"
+            transferBtn.onclick = () => {
+                import("./websocket-manager.js").then(({ transferHost }) => {
+                    transferHost(nickname)
+                })
+            }
+            li.appendChild(transferBtn)
         }
     })
 
     import("./game-state.js").then(({ choosingPlayerId }) => {
         if (playerId && playerId.toString() === choosingPlayerId) {
             li.classList.add("choosing-player")
-            li.textContent += " (выбирает мелодию)"
+            playerInfo.textContent += " (выбирает мелодию)"
         }
     })
 

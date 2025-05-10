@@ -64,6 +64,50 @@ function handleEvent(type, payload) {
 
     try {
         switch (type) {
+            // Add this case to the existing switch statement
+            case "transfer_master":
+                console.log("transfer_master event received:", payload)
+                if (payload.nickname) {
+                    import("./game-state.js").then(({ currentNick, setIsHost }) => {
+                        const isNewHost = payload.nickname === currentNick
+                        setIsHost(isNewHost)
+
+                        // Update UI elements based on new host status
+                        const startBtn = document.getElementById("start-btn")
+                        if (startBtn) {
+                            startBtn.classList.toggle("hidden", !isNewHost)
+                        }
+
+                        // Get all players from the list and update their host status
+                        const playersListEl = document.getElementById("players-list")
+                        if (playersListEl) {
+                            const players = []
+                            Array.from(playersListEl.children).forEach((li) => {
+                                // Extract nickname from the first child (span) to avoid button text
+                                const playerSpan = li.querySelector("span")
+                                let nickname = playerSpan ? playerSpan.textContent.split(" (")[0] : li.textContent.split(" (")[0]
+
+                                // Clean up any trailing spaces
+                                nickname = nickname.trim()
+
+                                const playerId = li.dataset.playerId
+                                players.push({
+                                    nickname,
+                                    is_master: nickname === payload.nickname,
+                                    id: playerId,
+                                })
+                            })
+
+                            // Clear and re-render the entire player list
+                            playersListEl.innerHTML = ""
+                            import("./ui-renderer.js").then(({ renderPlayersList }) => {
+                                renderPlayersList(players)
+                            })
+                        }
+                    })
+                }
+                break
+
             case "init":
                 console.log("init event with payload:", payload)
 
@@ -476,4 +520,22 @@ function handleEvent(type, payload) {
     }
 }
 
-export { connectWebSocket }
+// Add the transferHost function to export at the end of the file
+function transferHost(nickname) {
+    if (!socket) {
+        console.error("Socket not connected")
+        return
+    }
+
+    console.log("Transferring host to:", nickname)
+    socket.send(
+        JSON.stringify({
+            type: "transfer_master",
+            payload: {
+                nickname: nickname,
+            },
+        }),
+    )
+}
+
+export { connectWebSocket, transferHost }
