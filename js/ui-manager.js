@@ -73,9 +73,9 @@ async function addPlaylistLink(link) {
         return alert("Введите ссылку")
     }
 
-    const yaPlaylistRe = /^https?:\/\/music\.yandex\.ru\/users\/[^/]+\/playlists\/\d+(\?.*)?$/
+    const yaPlaylistRe = /^https:\/\/music\.yandex\.ru\/.*playlist.*/;
     if (!yaPlaylistRe.test(link)) {
-        return alert("Некорректная ссылка. Пожалуйста, введите ссылку на плейлист Яндекс.��узыки.")
+        return alert("Некорректная ссылка. Пожалуйста, введите ссылку на плейлист Яндекс.Музыки")
     }
 
     try {
