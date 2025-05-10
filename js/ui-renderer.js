@@ -469,10 +469,8 @@ function updateScoreDisplay(nickname, points) {
         }
     }
 
-    const leaderboardModal = document.querySelector(".leaderboard-modal")
-    if (leaderboardModal) {
-        updateLeaderboardTable(leaderboardModal)
-    }
+    // Always update the leaderboard when a score changes
+    updateLeaderboardTable()
 }
 
 function clearAnswersContainer() {
@@ -483,165 +481,94 @@ function clearAnswersContainer() {
     }
 }
 
-function updateLeaderboardTable(modal) {
+function updateLeaderboardTable() {
+    console.log("Updating leaderboard table")
     const sortedPlayers = getSortedPlayersByScore()
+    const tbody = document.getElementById("leaderboard-tbody")
 
-    const tbody = modal.querySelector("tbody")
-    if (!tbody) return
+    if (!tbody) {
+        console.error("Leaderboard tbody not found")
+        return
+    }
 
     tbody.innerHTML = ""
+
+    if (sortedPlayers.length === 0) {
+        console.log("No player scores available")
+        return
+    }
 
     sortedPlayers.forEach((player, index) => {
         const row = document.createElement("tr")
 
         if (player.nickname === currentNick) {
-            row.style.backgroundColor = "rgba(74, 144, 226, 0.1)"
-            row.style.fontWeight = "bold"
+            row.classList.add("current-player")
         }
 
         if (index < 3) {
-            row.style.color = ["#FFD700", "#C0C0C0", "#CD7F32"][index]
-            row.style.fontWeight = "bold"
+            row.classList.add(`rank-${index + 1}`)
         }
 
         const rankCell = document.createElement("td")
         rankCell.textContent = (index + 1).toString()
-        rankCell.style.padding = "10px"
-        rankCell.style.borderBottom = "1px solid #ddd"
 
         const nameCell = document.createElement("td")
         nameCell.textContent = player.nickname
-        nameCell.style.padding = "10px"
-        nameCell.style.borderBottom = "1px solid #ddd"
 
         const scoreCell = document.createElement("td")
         scoreCell.textContent = player.score.toString()
-        scoreCell.style.padding = "10px"
-        scoreCell.style.borderBottom = "1px solid #ddd"
-        scoreCell.style.textAlign = "right"
+        scoreCell.classList.add("score-cell")
 
         row.appendChild(rankCell)
         row.appendChild(nameCell)
         row.appendChild(scoreCell)
         tbody.appendChild(row)
     })
-}
 
-function setupLeaderboardAutoUpdate() {
-    const leaderboardInterval = setInterval(() => {
-        const leaderboardModal = document.querySelector(".leaderboard-modal")
-        if (leaderboardModal) {
-            updateLeaderboardTable(leaderboardModal)
-        } else {
-            clearInterval(leaderboardInterval)
-        }
-    }, 2000)
-
-    return leaderboardInterval
+    console.log(`Leaderboard updated with ${sortedPlayers.length} players`)
 }
 
 function showLeaderboard() {
     console.log("Showing leaderboard")
+    const leaderboardModal = document.getElementById("leaderboard-modal")
 
-    if (document.querySelector(".leaderboard-modal")) {
-        return
-    }
+    if (leaderboardModal) {
+        // Make sure we have data before showing
+        updateLeaderboardTable()
 
-    const modal = document.createElement("div")
-    modal.className = "leaderboard-modal"
-    modal.style.position = "fixed"
-    modal.style.top = "0"
-    modal.style.left = "0"
-    modal.style.width = "100%"
-    modal.style.height = "100%"
-    modal.style.backgroundColor = "rgba(0, 0, 0, 0.7)"
-    modal.style.display = "flex"
-    modal.style.justifyContent = "center"
-    modal.style.alignItems = "center"
-    modal.style.zIndex = "2000"
-
-    const container = document.createElement("div")
-    container.className = "leaderboard-container"
-    container.style.backgroundColor = "white"
-    container.style.padding = "20px"
-    container.style.borderRadius = "10px"
-    container.style.maxWidth = "400px"
-    container.style.width = "80%"
-    container.style.maxHeight = "80vh"
-    container.style.overflowY = "auto"
-
-    const title = document.createElement("h2")
-    title.textContent = "Таблица лидеров"
-    title.style.textAlign = "center"
-    title.style.marginBottom = "20px"
-    title.style.color = "#333"
-
-    const table = document.createElement("table")
-    table.style.width = "100%"
-    table.style.borderCollapse = "collapse"
-
-    const thead = document.createElement("thead")
-    const headerRow = document.createElement("tr")
-
-    const rankHeader = document.createElement("th")
-    rankHeader.textContent = "Место"
-    rankHeader.style.padding = "10px"
-    rankHeader.style.borderBottom = "2px solid #ddd"
-    rankHeader.style.textAlign = "left"
-
-    const nameHeader = document.createElement("th")
-    nameHeader.textContent = "Игрок"
-    nameHeader.style.padding = "10px"
-    nameHeader.style.borderBottom = "2px solid #ddd"
-    nameHeader.style.textAlign = "left"
-
-    const scoreHeader = document.createElement("th")
-    scoreHeader.textContent = "Очки"
-    scoreHeader.style.padding = "10px"
-    scoreHeader.style.borderBottom = "2px solid #ddd"
-    scoreHeader.style.textAlign = "right"
-
-    headerRow.appendChild(rankHeader)
-    headerRow.appendChild(nameHeader)
-    headerRow.appendChild(scoreHeader)
-    thead.appendChild(headerRow)
-    table.appendChild(thead)
-
-    const tbody = document.createElement("tbody")
-    table.appendChild(tbody)
-
-    updateLeaderboardTable(modal)
-
-    const updateInterval = setupLeaderboardAutoUpdate()
-
-    const closeButton = document.createElement("button")
-    closeButton.textContent = "Закрыть"
-    closeButton.style.display = "block"
-    closeButton.style.margin = "20px auto 0"
-    closeButton.style.padding = "10px 20px"
-    closeButton.style.backgroundColor = "#4a90e2"
-    closeButton.style.color = "white"
-    closeButton.style.border = "none"
-    closeButton.style.borderRadius = "5px"
-    closeButton.style.cursor = "pointer"
-    closeButton.onclick = () => {
-        document.body.removeChild(modal)
-        clearInterval(updateInterval)
-    }
-
-    container.appendChild(title)
-    container.appendChild(table)
-    container.appendChild(closeButton)
-    modal.appendChild(container)
-
-    document.body.appendChild(modal)
-
-    modal.addEventListener("click", (e) => {
-        if (e.target === modal) {
-            document.body.removeChild(modal)
-            clearInterval(updateInterval)
+        // Check if we have any rows
+        const tbody = document.getElementById("leaderboard-tbody")
+        if (tbody && tbody.children.length === 0) {
+            console.log("No leaderboard data available")
+            // Add a placeholder row if no data
+            const row = document.createElement("tr")
+            const cell = document.createElement("td")
+            cell.colSpan = 3
+            cell.textContent = "Нет данных о счете игроков"
+            cell.style.textAlign = "center"
+            cell.style.padding = "20px"
+            row.appendChild(cell)
+            tbody.appendChild(row)
         }
-    })
+
+        // Show the leaderboard
+        leaderboardModal.classList.remove("hidden")
+        leaderboardModal.style.display = "flex"
+    } else {
+        console.error("Leaderboard modal not found")
+    }
+}
+
+function hideLeaderboard() {
+    console.log("Hiding leaderboard")
+    const leaderboardModal = document.getElementById("leaderboard-modal")
+
+    if (leaderboardModal) {
+        leaderboardModal.classList.add("hidden")
+        leaderboardModal.style.display = "none"
+    } else {
+        console.error("Leaderboard modal not found when trying to hide")
+    }
 }
 
 export {
@@ -657,6 +584,6 @@ export {
     updateScoreDisplay,
     clearAnswersContainer,
     showLeaderboard,
+    hideLeaderboard,
     updateLeaderboardTable,
-    setupLeaderboardAutoUpdate,
 }

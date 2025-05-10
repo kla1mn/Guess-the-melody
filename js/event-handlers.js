@@ -153,6 +153,28 @@ function setupEventHandlers() {
             }
         })
     })
+
+    // Replace the close leaderboard button event handler
+    document.getElementById("close-leaderboard-btn")?.addEventListener("click", () => {
+        console.log("Close leaderboard button clicked")
+        const leaderboardModal = document.getElementById("leaderboard-modal")
+        if (leaderboardModal) {
+            leaderboardModal.classList.add("hidden")
+            leaderboardModal.style.display = "none"
+        }
+    })
+
+    // Replace the leaderboard modal background click event handler
+    document.getElementById("leaderboard-modal")?.addEventListener("click", (e) => {
+        if (e.target === document.getElementById("leaderboard-modal")) {
+            console.log("Leaderboard background clicked")
+            const leaderboardModal = document.getElementById("leaderboard-modal")
+            if (leaderboardModal) {
+                leaderboardModal.classList.add("hidden")
+                leaderboardModal.style.display = "none"
+            }
+        }
+    })
 }
 
 export { setupEventHandlers }

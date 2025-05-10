@@ -91,6 +91,33 @@
     font-weight: bold;
 }
 
+/* Стили для текущего игрока */
+.current-player {
+    background-color: rgba(74, 144, 226, 0.1);
+    font-weight: bold;
+}
+
+/* Стили для топ-3 игроков */
+.rank-1 {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.rank-2 {
+    color: #c0c0c0;
+    font-weight: bold;
+}
+
+.rank-3 {
+    color: #cd7f32;
+    font-weight: bold;
+}
+
+/* Стиль для ячейки с очками */
+.score-cell {
+    text-align: right;
+}
+
 .leaderboard-container button {
     background-color: #ff5c00;
     color: white;
@@ -107,4 +134,9 @@
 
 .leaderboard-container button:hover {
     background-color: #ff7a33;
+}
+
+/* Make sure hidden class works properly */
+.hidden {
+    display: none !important;
 }

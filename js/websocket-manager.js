@@ -30,14 +30,14 @@ function connectWebSocket() {
         let msg
         try {
             msg = JSON.parse(event.data)
-            console.log(`Получено: ${msg.payload}`)
+            console.log(`Получено: ${JSON.stringify(msg)}`)
         } catch (e) {
             console.error("WS: некорректный JSON", event.data, e)
             return
         }
 
-        let eventType = msg.type
-        let payload = msg.payload
+        const eventType = msg.type
+        const payload = msg.payload
 
         handleEvent(eventType, payload)
     })
@@ -99,19 +99,17 @@ function handleEvent(type, payload) {
                 setCurrentNick(payload.current_player_nickname)
                 document.getElementById("room-code").textContent = payload.invite_code
 
-                if (payload.players && Array.isArray(payload.players)) {
-                    updatePlayerMappings(payload.players)
+                updatePlayerMappings(payload.players)
 
-                    const initialScores = {}
-                    payload.players.forEach((player) => {
-                        if (player.nickname) {
-                            initialScores[player.nickname] = player.points || 0
-                        }
-                    })
-                    setAllPlayersScores(initialScores)
+                const initialScores = {}
+                payload.players.forEach((player) => {
+                    if (player.nickname) {
+                        initialScores[player.nickname] = player.points || 0
+                    }
+                })
+                setAllPlayersScores(initialScores)
 
-                    renderPlayersList(payload.players)
-                }
+                renderPlayersList(payload.players)
 
                 const currentPlayer = payload.players.find((p) => p.nickname === payload.current_player_nickname)
                 if (currentPlayer && currentPlayer.id) {
@@ -175,6 +173,10 @@ function handleEvent(type, payload) {
                             resetAnsweredPlayers()
                             clearAnswersContainer()
 
+                            import("./ui-renderer.js").then(({ initializeLeaderboard }) => {
+                                initializeLeaderboard()
+                            })
+
                             setTimeout(() => {
                                 const infoEl = document.getElementById("game-info")
                                 if (infoEl) {
@@ -198,6 +200,10 @@ function handleEvent(type, payload) {
                     showGame(payload.categories)
                     resetAnsweredPlayers()
                     clearAnswersContainer()
+
+                    import("./ui-renderer.js").then(({ initializeLeaderboard }) => {
+                        initializeLeaderboard()
+                    })
                 }
                 break
 
@@ -299,12 +305,10 @@ function handleEvent(type, payload) {
                         setPlayerScore(lastPlayerNickname, payload.new_points)
                         updateScoreDisplay(lastPlayerNickname, payload.new_points)
 
-                        const leaderboardModal = document.querySelector(".leaderboard-modal")
-                        if (leaderboardModal) {
-                            import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                updateLeaderboardTable(leaderboardModal)
-                            })
-                        }
+                        // Always update the leaderboard when scores change
+                        import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+                            updateLeaderboardTable()
+                        })
 
                         const existingMessages = document.querySelectorAll(".system-message")
                         let isDuplicate = false
@@ -331,17 +335,29 @@ function handleEvent(type, payload) {
                             }
                         }
                     }
+                    import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
+                        const choosingPlayerId = playerNicknameToId[payload.choosing_player]
+                        if (choosingPlayerId) {
+                            setChoosingPlayerId(choosingPlayerId)
+                        } else {
+                            setChoosingPlayerId(payload.choosing_player)
+                        }
 
-                    if (payload.choosing_player) {
-                        import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
-                            const choosingPlayerId = playerNicknameToId[payload.choosing_player]
-                            if (choosingPlayerId) {
-                                setChoosingPlayerId(choosingPlayerId)
-                            } else {
-                                setChoosingPlayerId(payload.choosing_player)
-                            }
-                        })
-                    }
+                        const nextMessage = document.createElement("div")
+                        nextMessage.className = "system-message"
+                        nextMessage.textContent = `Игрок ${payload.choosing_player} выбирает следующую мелодию`
+
+                        const answersContainer = document.getElementById("answers-container")
+                        if (answersContainer) {
+                            answersContainer.appendChild(nextMessage)
+
+                            setTimeout(() => {
+                                nextMessage.style.opacity = "0"
+                                nextMessage.style.transition = "opacity 0.5s"
+                                setTimeout(() => nextMessage.remove(), 500)
+                            }, 3000)
+                        }
+                    })
 
                     if (currentAudioPlayer) {
                         currentAudioPlayer.play().catch((err) => console.log("Could not resume playback:", err))
@@ -354,76 +370,62 @@ function handleEvent(type, payload) {
             case "accept_answer":
                 console.log(`Event: ${type}`)
                 try {
-                    if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
-                        const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
+                    const lastPlayerNickname = payload.choosing_player
 
-                        setPlayerScore(lastPlayerNickname, payload.new_points)
-                        updateScoreDisplay(lastPlayerNickname, payload.new_points)
+                    setPlayerScore(lastPlayerNickname, payload.new_points)
+                    updateScoreDisplay(lastPlayerNickname, payload.new_points)
 
-                        const leaderboardModal = document.querySelector(".leaderboard-modal")
-                        if (leaderboardModal) {
-                            import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                updateLeaderboardTable(leaderboardModal)
-                            })
+                    import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+                        updateLeaderboardTable()
+                    })
+
+                    const existingMessages = document.querySelectorAll(".system-message")
+                    let isDuplicate = false
+                    existingMessages.forEach((msg) => {
+                        if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} принят!`)) {
+                            isDuplicate = true
                         }
+                    })
 
-                        const existingMessages = document.querySelectorAll(".system-message")
-                        let isDuplicate = false
-                        existingMessages.forEach((msg) => {
-                            if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} принят!`)) {
-                                isDuplicate = true
-                            }
-                        })
+                    if (!isDuplicate) {
+                        const message = document.createElement("div")
+                        message.className = "system-message"
+                        message.textContent = `Ответ игрока ${lastPlayerNickname} принят! Теперь у него ${payload.new_points} очков`
 
-                        if (!isDuplicate) {
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${lastPlayerNickname} принят! Теперь у него ${payload.new_points} очков`
+                        const answersContainer = document.getElementById("answers-container")
+                        if (answersContainer) {
+                            answersContainer.appendChild(message)
 
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-
-                                setTimeout(() => {
-                                    message.style.opacity = "0"
-                                    message.style.transition = "opacity 0.5s"
-                                    setTimeout(() => message.remove(), 500)
-                                }, 3000)
-                            }
+                            setTimeout(() => {
+                                message.style.opacity = "0"
+                                message.style.transition = "opacity 0.5s"
+                                setTimeout(() => message.remove(), 500)
+                            }, 3000)
                         }
                     }
+                    import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
+                        const choosingPlayerId = playerNicknameToId[payload.choosing_player]
+                        if (choosingPlayerId) {
+                            setChoosingPlayerId(choosingPlayerId)
+                        } else {
+                            setChoosingPlayerId(payload.choosing_player)
+                        }
 
-                    if (payload.choosing_player) {
-                        import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
-                            const choosingPlayerId = playerNicknameToId[payload.choosing_player]
-                            if (choosingPlayerId) {
-                                setChoosingPlayerId(choosingPlayerId)
-                            } else {
-                                setChoosingPlayerId(payload.choosing_player)
-                            }
+                        const nextMessage = document.createElement("div")
+                        nextMessage.className = "system-message"
+                        nextMessage.textContent = `Игрок ${payload.choosing_player} выбирает следующую мелодию`
 
-                            const nextMessage = document.createElement("div")
-                            nextMessage.className = "system-message"
-                            nextMessage.textContent = `Игрок ${payload.choosing_player} выбирает следующую мелодию`
+                        const answersContainer = document.getElementById("answers-container")
+                        if (answersContainer) {
+                            answersContainer.appendChild(nextMessage)
 
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(nextMessage)
-
-                                setTimeout(() => {
-                                    nextMessage.style.opacity = "0"
-                                    nextMessage.style.transition = "opacity 0.5s"
-                                    setTimeout(() => nextMessage.remove(), 500)
-                                }, 3000)
-                            }
-
-                            import("./ui-renderer.js").then(({ renderCategories }) => {
-                                import("./game-state.js").then(({ gameCategories }) => {
-                                    renderCategories(gameCategories)
-                                })
-                            })
-                        })
-                    }
+                            setTimeout(() => {
+                                nextMessage.style.opacity = "0"
+                                nextMessage.style.transition = "opacity 0.5s"
+                                setTimeout(() => nextMessage.remove(), 500)
+                            }, 3000)
+                        }
+                    })
 
                     if (currentAudioPlayer) {
                         currentAudioPlayer.pause()
@@ -442,12 +444,9 @@ function handleEvent(type, payload) {
                         setPlayerScore(lastPlayerNickname, payload.new_points)
                         updateScoreDisplay(lastPlayerNickname, payload.new_points)
 
-                        const leaderboardModal = document.querySelector(".leaderboard-modal")
-                        if (leaderboardModal) {
-                            import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                updateLeaderboardTable(leaderboardModal)
-                            })
-                        }
+                        import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+                            updateLeaderboardTable()
+                        })
 
                         const existingMessages = document.querySelectorAll(".system-message")
                         let isDuplicate = false
@@ -474,7 +473,29 @@ function handleEvent(type, payload) {
                             }
                         }
                     }
+                    import("./game-state.js").then(({ setChoosingPlayerId, playerNicknameToId }) => {
+                        const choosingPlayerId = playerNicknameToId[payload.choosing_player]
+                        if (choosingPlayerId) {
+                            setChoosingPlayerId(choosingPlayerId)
+                        } else {
+                            setChoosingPlayerId(payload.choosing_player)
+                        }
 
+                        const nextMessage = document.createElement("div")
+                        nextMessage.className = "system-message"
+                        nextMessage.textContent = `Игрок ${payload.choosing_player} выбирает следующую мелодию`
+
+                        const answersContainer = document.getElementById("answers-container")
+                        if (answersContainer) {
+                            answersContainer.appendChild(nextMessage)
+
+                            setTimeout(() => {
+                                nextMessage.style.opacity = "0"
+                                nextMessage.style.transition = "opacity 0.5s"
+                                setTimeout(() => nextMessage.remove(), 500)
+                            }, 3000)
+                        }
+                    })
                     if (currentAudioPlayer) {
                         currentAudioPlayer.play().catch((err) => console.log("Could not resume playback:", err))
                     }

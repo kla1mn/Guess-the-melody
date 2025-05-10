@@ -65,6 +65,26 @@
 <!-- Кнопка выхода из игры -->
 <button id="logout-btn" class="logout-btn hidden">Выйти из игры</button>
 
+<!-- Таблица лидеров (скрыта по умолчанию) -->
+<div class="leaderboard-modal hidden" id="leaderboard-modal" style="display: none;">
+    <div class="leaderboard-container">
+        <h2>Таблица лидеров</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Место</th>
+                <th>Игрок</th>
+                <th>Очки</th>
+            </tr>
+            </thead>
+            <tbody id="leaderboard-tbody">
+            <!-- Данные таблицы будут добавлены динамически -->
+            </tbody>
+        </table>
+        <button id="close-leaderboard-btn">Закрыть</button>
+    </div>
+</div>
+
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
