@@ -227,10 +227,6 @@ function renderCategoryCards(categories) {
                             }
                             console.log("Sending message:", message)
                             socket.send(JSON.stringify(message))
-
-                            m.is_guessed = true
-                            btn.disabled = true
-                            btn.style.opacity = "0.5"
                         }
                     })
                 })
@@ -578,6 +574,31 @@ function hideLeaderboard() {
     }
 }
 
+function updateCategoryButtons() {
+    import("./game-state.js").then(({ gameCategories }) => {
+        if (!gameCategories) return
+
+        const categoryCards = document.querySelectorAll(".category-card")
+        categoryCards.forEach((card) => {
+            const categoryName = card.querySelector("h3").textContent
+            const buttons = card.querySelectorAll(".buttons button")
+
+            const category = gameCategories.find((c) => c.category_name === categoryName)
+            if (category && category.melodies) {
+                buttons.forEach((btn, index) => {
+                    if (index < category.melodies.length) {
+                        const melody = category.melodies[index]
+                        if (melody.is_guessed) {
+                            btn.disabled = true
+                            btn.style.opacity = "0.5"
+                        }
+                    }
+                })
+            }
+        })
+    })
+}
+
 export {
     renderPlayersList,
     addPlayerToList,
@@ -593,4 +614,5 @@ export {
     showLeaderboard,
     hideLeaderboard,
     updateLeaderboardTable,
+    updateCategoryButtons,
 }

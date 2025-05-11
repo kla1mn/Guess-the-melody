@@ -230,6 +230,24 @@ function updatePlayerMappings(players) {
     saveState()
 }
 
+function markMelodyAsGuessed(categoryName, points) {
+    if (!gameCategories) return
+
+    for (const category of gameCategories) {
+        if (category.category_name === categoryName) {
+            for (const melody of category.melodies) {
+                if (melody.points === points) {
+                    melody.is_guessed = true
+                    console.log(`Marked melody as guessed: ${categoryName}, ${points} points`)
+                    break
+                }
+            }
+            break
+        }
+    }
+    saveState()
+}
+
 import { showWaiting, showGame } from "./ui-manager.js"
 
 export {
@@ -260,6 +278,7 @@ export {
     setAllPlayersScores,
     getSortedPlayersByScore,
     updatePlayerMappings,
+    markMelodyAsGuessed,
 }
 
 export function setSocket(newSocket) {

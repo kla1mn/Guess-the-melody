@@ -169,6 +169,16 @@ function handleEvent(type, payload) {
                                 setCurrentAnswer(payload.state_info.answer)
                             }
 
+                            payload.categories.forEach((category) => {
+                                if (category.melodies) {
+                                    category.melodies.forEach((melody) => {
+                                        if (melody.is_guessed === undefined) {
+                                            melody.is_guessed = false
+                                        }
+                                    })
+                                }
+                            })
+
                             showGame(payload.categories)
                             resetAnsweredPlayers()
 
@@ -200,6 +210,16 @@ function handleEvent(type, payload) {
                         },
                     )
                 } else {
+                    payload.categories.forEach((category) => {
+                        if (category.melodies) {
+                            category.melodies.forEach((melody) => {
+                                if (melody.is_guessed === undefined) {
+                                    melody.is_guessed = false
+                                }
+                            })
+                        }
+                    })
+
                     showGame(payload.categories)
                     resetAnsweredPlayers()
 
@@ -217,6 +237,16 @@ function handleEvent(type, payload) {
                 console.log(`Event: ${type}`)
 
                 resetAnsweredPlayers()
+
+                if (payload.category_name && payload.points) {
+                    import("./game-state.js").then(({ markMelodyAsGuessed }) => {
+                        markMelodyAsGuessed(payload.category_name, payload.points)
+
+                        import("./ui-renderer.js").then(({ updateCategoryButtons }) => {
+                            updateCategoryButtons()
+                        })
+                    })
+                }
                 clearAnswersContainer()
 
                 if (payload.link) {
@@ -257,7 +287,7 @@ function handleEvent(type, payload) {
                 console.log(`Event: ${type}`)
 
                 if (payload.answering_player_nickname && payload.answer) {
-                    import("./game-state.js").then(({ isHost, currentAudioPlayer }) => {
+                    import("./game-state.js").then(({ isHost, currentAudioPlayer, markMelodyAsGuessed }) => {
                         if (isHost && currentAudioPlayer) {
                             currentAudioPlayer.pause()
 
@@ -286,7 +316,7 @@ function handleEvent(type, payload) {
                         }
                     })
 
-                    import("./ui-renderer.js").then(({ addPlayerAnswer, showAnswersContainer }) => {
+                    import("./ui-renderer.js").then(({ addPlayerAnswer, showAnswersContainer, updateCategoryButtons }) => {
                         import("./game-state.js").then(({ addPlayerToAnswered }) => {
                             addPlayerToAnswered(payload.answering_player_nickname)
                             showAnswersContainer()
