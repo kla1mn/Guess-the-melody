@@ -85,6 +85,33 @@
     </div>
 </div>
 
+<!-- Модальное окно окончания игры -->
+<div class="leaderboard-modal hidden" id="game-over-modal" style="display: none;">
+    <div class="leaderboard-container game-over-container">
+        <h2>Игра окончена!</h2>
+        <div id="winner-container">
+            <div class="winner-crown">👑</div>
+            <h3>Победитель</h3>
+            <div id="winner-name"></div>
+            <div id="winner-score"></div>
+        </div>
+        <h3>Финальные результаты</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>Место</th>
+                <th>Игрок</th>
+                <th>Очки</th>
+            </tr>
+            </thead>
+            <tbody id="final-results-tbody">
+            <!-- Данные таблицы будут добавлены динамически -->
+            </tbody>
+        </table>
+        <button id="exit-game-btn">Выйти из игры</button>
+    </div>
+</div>
+
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

@@ -29,6 +29,18 @@ function init() {
         })
     }
 
+    // Add event listener for game over modal background click
+    const gameOverModal = document.getElementById("game-over-modal")
+    if (gameOverModal) {
+        gameOverModal.addEventListener("click", (e) => {
+            if (e.target === gameOverModal) {
+                console.log("Game over modal background clicked")
+                // We don't hide the game over modal on background click
+                // as it's an important end-game screen
+            }
+        })
+    }
+
     const stateLoaded = loadSavedState()
     console.log("Saved state loaded:", stateLoaded)
 }

@@ -182,6 +182,7 @@ function setCategoryBackground(card, categoryName) {
     img.src = desired
 }
 
+// Modify the renderCategoryCards function to check if melodies are guessed
 function renderCategoryCards(categories) {
     categories.forEach((cat) => {
         const card = document.createElement("div")
@@ -227,6 +228,9 @@ function renderCategoryCards(categories) {
                             }
                             console.log("Sending message:", message)
                             socket.send(JSON.stringify(message))
+
+                            // We'll now let the server tell us when it's guessed
+                            // instead of marking it locally here
                         }
                     })
                 })
@@ -241,6 +245,7 @@ function renderCategoryCards(categories) {
 
 let onTimeUpdate
 
+// Modify the playMelody function to add a timer for the last melody
 function playMelody(link, startTime = 0, maxDuration = 30) {
     if (!link) {
         console.error("No link provided for melody playback")
@@ -260,6 +265,27 @@ function playMelody(link, startTime = 0, maxDuration = 30) {
     if (!isHost) {
         showAnswerInterface()
     }
+
+    // Clear any existing game over timer
+    if (window.gameOverTimer) {
+        clearTimeout(window.gameOverTimer)
+        window.gameOverTimer = null
+    }
+
+    // Check if this is the last melody
+    import("./game-state.js").then(({ checkAllMelodiesGuessed }) => {
+        // Set a timer to show game over screen after 30 seconds if this is the last melody
+        // and no one answers (timer will be cleared if someone answers)
+        if (checkAllMelodiesGuessed()) {
+            console.log("This is the last melody, setting timer for game over screen")
+            window.gameOverTimer = setTimeout(() => {
+                import("./game-state.js").then(({ showGameOverAfterDelay }) => {
+                    console.log("30 seconds passed after last melody, showing game over screen")
+                    showGameOverAfterDelay()
+                })
+            }, maxDuration * 1000)
+        }
+    })
 
     onTimeUpdate = () => {
         if (audioPlayer.currentTime >= startTime + maxDuration) {
@@ -574,6 +600,7 @@ function hideLeaderboard() {
     }
 }
 
+// Add this function to update category buttons based on guessed melodies
 function updateCategoryButtons() {
     import("./game-state.js").then(({ gameCategories }) => {
         if (!gameCategories) return
@@ -583,8 +610,10 @@ function updateCategoryButtons() {
             const categoryName = card.querySelector("h3").textContent
             const buttons = card.querySelectorAll(".buttons button")
 
+            // Find the corresponding category in gameCategories
             const category = gameCategories.find((c) => c.category_name === categoryName)
             if (category && category.melodies) {
+                // Update each button based on whether the melody is guessed
                 buttons.forEach((btn, index) => {
                     if (index < category.melodies.length) {
                         const melody = category.melodies[index]
@@ -597,6 +626,156 @@ function updateCategoryButtons() {
             }
         })
     })
+}
+
+// Function to show the game over screen
+function showGameOverScreen() {
+    console.log("Showing game over screen")
+
+    const gameOverModal = document.getElementById("game-over-modal")
+    if (!gameOverModal) {
+        console.error("Game over modal not found")
+        return
+    }
+
+    // Get sorted players by score
+    import("./game-state.js").then(({ getSortedPlayersByScore, currentNick }) => {
+        const sortedPlayers = getSortedPlayersByScore()
+
+        if (sortedPlayers.length === 0) {
+            console.error("No player scores available for game over screen")
+            return
+        }
+
+        // Get the winner (first player in sorted list)
+        const winner = sortedPlayers[0]
+
+        // Update winner section
+        const winnerNameEl = document.getElementById("winner-name")
+        const winnerScoreEl = document.getElementById("winner-score")
+
+        if (winnerNameEl && winnerScoreEl) {
+            winnerNameEl.textContent = winner.nickname
+            winnerScoreEl.textContent = `${winner.score} очков`
+
+            // Add special styling if current player is the winner
+            if (winner.nickname === currentNick) {
+                winnerNameEl.style.textShadow = "0 0 10px rgba(255, 215, 0, 0.8)"
+                document.getElementById("winner-container").style.animation = "winner-glow 1s infinite alternate"
+            }
+        }
+
+        // Update final results table
+        const finalResultsTbody = document.getElementById("final-results-tbody")
+        if (finalResultsTbody) {
+            finalResultsTbody.innerHTML = ""
+
+            sortedPlayers.forEach((player, index) => {
+                const row = document.createElement("tr")
+
+                if (player.nickname === currentNick) {
+                    row.classList.add("current-player")
+                }
+
+                if (index < 3) {
+                    row.classList.add(`rank-${index + 1}`)
+                }
+
+                const rankCell = document.createElement("td")
+                rankCell.textContent = (index + 1).toString()
+
+                const nameCell = document.createElement("td")
+                nameCell.textContent = player.nickname
+
+                const scoreCell = document.createElement("td")
+                scoreCell.textContent = player.score.toString()
+                scoreCell.classList.add("score-cell")
+
+                row.appendChild(rankCell)
+                row.appendChild(nameCell)
+                row.appendChild(scoreCell)
+                finalResultsTbody.appendChild(row)
+            })
+        }
+
+        // Add event listener to exit game button
+        const exitGameBtn = document.getElementById("exit-game-btn")
+        if (exitGameBtn) {
+            exitGameBtn.onclick = () => {
+                import("./game-state.js").then(({ clearState }) => {
+                    clearState()
+                    window.location.reload()
+                })
+            }
+        }
+
+        // Show the modal
+        gameOverModal.classList.remove("hidden")
+        gameOverModal.style.display = "flex"
+
+        // Add confetti effect for celebration
+        addConfettiEffect()
+    })
+}
+
+// Function to add confetti effect
+function addConfettiEffect() {
+    // Simple confetti effect
+    const confettiCount = 200
+    const container = document.body
+
+    for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement("div")
+        confetti.style.position = "fixed"
+        confetti.style.width = `${Math.random() * 10 + 5}px`
+        confetti.style.height = `${Math.random() * 10 + 5}px`
+        confetti.style.backgroundColor = getRandomColor()
+        confetti.style.borderRadius = "50%"
+        confetti.style.left = `${Math.random() * 100}vw`
+        confetti.style.top = "-10px"
+        confetti.style.zIndex = "1999"
+        confetti.style.opacity = Math.random() * 0.7 + 0.3
+        confetti.style.animation = `fall ${Math.random() * 3 + 2}s linear forwards`
+
+        container.appendChild(confetti)
+
+        // Remove confetti after animation
+        setTimeout(() => {
+            if (confetti.parentNode) {
+                confetti.parentNode.removeChild(confetti)
+            }
+        }, 5000)
+    }
+
+    // Add keyframes for fall animation if not already added
+    if (!document.getElementById("confetti-style")) {
+        const style = document.createElement("style")
+        style.id = "confetti-style"
+        style.innerHTML = `
+      @keyframes fall {
+        0% {
+          transform: translateY(0) rotate(0deg);
+        }
+        100% {
+          transform: translateY(100vh) rotate(720deg);
+        }
+      }
+    `
+        document.head.appendChild(style)
+    }
+}
+
+// Helper function to get random color for confetti
+function getRandomColor() {
+    const colors = [
+        "#ff5c00", // Orange (theme color)
+        "#ffd700", // Gold
+        "#4a90e2", // Blue
+        "#50c878", // Green
+        "#e94e77", // Pink
+        "#9370db", // Purple
+    ]
+    return colors[Math.floor(Math.random() * colors.length)]
 }
 
 export {
@@ -615,4 +794,5 @@ export {
     hideLeaderboard,
     updateLeaderboardTable,
     updateCategoryButtons,
+    showGameOverScreen,
 }

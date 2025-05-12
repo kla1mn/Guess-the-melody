@@ -140,3 +140,74 @@
 .hidden {
     display: none !important;
 }
+
+/* Стили для экрана окончания игры */
+.game-over-container {
+    text-align: center;
+    background-color: #2d2d2d;
+    background-image: linear-gradient(to bottom, #2d2d2d, #3d3d3d);
+}
+
+.game-over-container h2 {
+    color: #ff5c00;
+    font-size: 32px;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.game-over-container h3 {
+    color: #ffffff;
+    margin: 20px 0;
+    font-size: 22px;
+}
+
+#winner-container {
+    background-color: rgba(255, 215, 0, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 2px solid #ffd700;
+    animation: winner-glow 2s infinite alternate;
+}
+
+@keyframes winner-glow {
+    from {
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+    to {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    }
+}
+
+.winner-crown {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+#winner-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffd700;
+    margin-bottom: 5px;
+}
+
+#winner-score {
+    font-size: 22px;
+    color: #ffffff;
+    margin-bottom: 10px;
+}
+
+#exit-game-btn {
+    background-color: #e94e77;
+    margin-top: 20px;
+    font-size: 18px;
+    padding: 14px 28px;
+}
+
+#exit-game-btn:hover {
+    background-color: #ed6b8e;
+}
+
+#final-results-tbody tr:nth-child(1) {
+    background-color: rgba(255, 215, 0, 0.1);
+}

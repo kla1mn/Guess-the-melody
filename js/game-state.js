@@ -230,6 +230,7 @@ function updatePlayerMappings(players) {
     saveState()
 }
 
+// Function to mark a melody as guessed
 function markMelodyAsGuessed(categoryName, points) {
     if (!gameCategories) return
 
@@ -246,6 +247,43 @@ function markMelodyAsGuessed(categoryName, points) {
         }
     }
     saveState()
+
+    // Check if all melodies are guessed after marking this one
+    checkAllMelodiesGuessed()
+}
+
+// Function to check if all melodies have been guessed
+function checkAllMelodiesGuessed() {
+    if (!gameCategories) return false
+
+    let allGuessed = true
+    let totalMelodies = 0
+    let guessedMelodies = 0
+
+    for (const category of gameCategories) {
+        if (category.melodies && category.melodies.length > 0) {
+            for (const melody of category.melodies) {
+                totalMelodies++
+                if (melody.is_guessed) {
+                    guessedMelodies++
+                } else {
+                    allGuessed = false
+                }
+            }
+        }
+    }
+
+    console.log(`Checked melodies: ${guessedMelodies}/${totalMelodies} guessed, all guessed: ${allGuessed}`)
+
+    // Return true if all melodies are guessed, but don't show game over screen yet
+    return allGuessed && totalMelodies > 0
+}
+
+// New function to show game over screen after delay or when called directly
+function showGameOverAfterDelay() {
+    import("./ui-renderer.js").then(({ showGameOverScreen }) => {
+        showGameOverScreen()
+    })
 }
 
 import { showWaiting, showGame } from "./ui-manager.js"
@@ -279,6 +317,8 @@ export {
     getSortedPlayersByScore,
     updatePlayerMappings,
     markMelodyAsGuessed,
+    checkAllMelodiesGuessed,
+    showGameOverAfterDelay,
 }
 
 export function setSocket(newSocket) {
