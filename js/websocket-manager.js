@@ -103,7 +103,6 @@ function handleEvent(type, payload) {
                 setCurrentNick(payload.current_player_nickname)
                 document.getElementById("room-code").textContent = payload.invite_code
 
-                // Make sure we properly map all players from the init event
                 if (payload.players && Array.isArray(payload.players)) {
                     updatePlayerMappings(payload.players)
 
@@ -217,9 +216,7 @@ function handleEvent(type, payload) {
                         },
                     )
                 } else {
-                    // Make sure we preserve the is_guessed state of melodies
                     if (payload.categories) {
-                        // Ensure all categories have the is_guessed property for each melody
                         payload.categories.forEach((category) => {
                             if (category.melodies) {
                                 category.melodies.forEach((melody) => {
@@ -249,12 +246,10 @@ function handleEvent(type, payload) {
 
                 resetAnsweredPlayers()
 
-                // Mark the melody as guessed in our local state
                 if (payload.category_name && payload.points) {
                     import("./game-state.js").then(({ markMelodyAsGuessed }) => {
                         markMelodyAsGuessed(payload.category_name, payload.points)
 
-                        // Update the UI to reflect the guessed melody
                         import("./ui-renderer.js").then(({ updateCategoryButtons }) => {
                             updateCategoryButtons()
                         })
