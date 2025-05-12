@@ -64,8 +64,6 @@ function showGame(categories) {
     joinScreen.classList.add("hidden")
     waitingScreen.classList.add("hidden")
     gameScreen.classList.remove("hidden")
-
-    connectWebSocket()
 }
 
 async function addPlaylistLink(link) {

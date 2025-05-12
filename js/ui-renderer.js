@@ -14,7 +14,10 @@ import { playersListEl, categoriesCt } from "./dom-elements.js"
 function renderPlayersList(players) {
     playersListEl.innerHTML = ""
 
-    import("./game-state.js").then(({ isHost, currentNick, gameStarted }) => {
+    import("./game-state.js").then(({ isHost, currentNick, gameStarted, logPlayerMappings }) => {
+        // Log player mappings for debugging
+        logPlayerMappings()
+
         players.forEach((p) => {
             const li = document.createElement("li")
             li.className = "player-list-item"
@@ -23,8 +26,9 @@ function renderPlayersList(players) {
             playerInfo.textContent = p.nickname + (p.is_master ? " (хост)" : "")
             li.appendChild(playerInfo)
 
-            if (p.id) {
-                li.dataset.playerId = p.id.toString()
+            const playerId = p.id
+            if (playerId !== undefined) {
+                li.dataset.playerId = String(playerId)
             }
 
             if (gameStarted && playersScores[p.nickname] !== undefined) {
@@ -32,7 +36,7 @@ function renderPlayersList(players) {
             }
 
             import("./game-state.js").then(({ choosingPlayerId }) => {
-                if (p.id && p.id.toString() === choosingPlayerId) {
+                if (playerId !== undefined && choosingPlayerId !== null && Number(playerId) === Number(choosingPlayerId)) {
                     li.classList.add("choosing-player")
                     playerInfo.textContent += " (выбирает мелодию)"
                 }
@@ -63,8 +67,10 @@ function addPlayerToList(nickname, isMaster = false, playerId = null) {
     playerInfo.textContent = nickname + (isMaster ? " (хост)" : "")
     li.appendChild(playerInfo)
 
-    if (playerId) {
-        li.dataset.playerId = playerId.toString()
+    if (playerId !== null && playerId !== undefined) {
+        // Store as string in dataset, but we'll convert to number when using it
+        li.dataset.playerId = String(playerId)
+        console.log(`Adding player to list with ID: ${playerId}, nickname: ${nickname}`)
     }
 
     import("./game-state.js").then(({ gameStarted, playersScores, isHost, currentNick }) => {
@@ -86,7 +92,7 @@ function addPlayerToList(nickname, isMaster = false, playerId = null) {
     })
 
     import("./game-state.js").then(({ choosingPlayerId }) => {
-        if (playerId && playerId.toString() === choosingPlayerId) {
+        if (playerId !== null && choosingPlayerId !== null && Number(playerId) === Number(choosingPlayerId)) {
             li.classList.add("choosing-player")
             playerInfo.textContent += " (выбирает мелодию)"
         }

@@ -16,44 +16,48 @@ import {
 import { renderPlayersList, playMelody, updateScoreDisplay, clearAnswersContainer } from "./ui-renderer.js"
 import { showGame } from "./ui-manager.js"
 
-let socket
+let socket = null;
 
 function connectWebSocket() {
-    console.log("Подключение к вебсокету...")
-    socket = new WebSocket(WS_BACKEND)
+    if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+        console.log("WS: уже подключён или в процессе подключения");
+        return socket;
+    }
+
+    console.log("Подключение к вебсокету...");
+    socket = new WebSocket(WS_BACKEND);
 
     socket.addEventListener("open", () => {
-        console.log("WS: подключено успешно")
-    })
+        console.log("WS: подключено успешно");
+    });
 
     socket.addEventListener("message", (event) => {
-        let msg
+        let msg;
         try {
-            msg = JSON.parse(event.data)
-            console.log(`Получено: ${JSON.stringify(msg)}`)
+            msg = JSON.parse(event.data);
+            console.log(`Получено: ${JSON.stringify(msg)}`);
         } catch (e) {
-            console.error("WS: некорректный JSON", event.data, e)
-            return
+            console.error("WS: некорректный JSON", event.data, e);
+            return;
         }
-
-        const eventType = msg.type
-        const payload = msg.payload
-
-        handleEvent(eventType, payload)
-    })
+        handleEvent(msg.type, msg.payload);
+    });
 
     socket.addEventListener("error", (e) => {
-        console.error("WS: ошибка", e)
-    })
+        console.error("WS: ошибка", e);
+    });
 
-    socket.addEventListener("close", () => {
-        console.log("WS: закрытие соединения")
-        //TODO переподключаться
-    })
+    socket.addEventListener("close", (e) => {
+        console.log("WS: закрыто соединение", e.reason);
+        for (let i =0; i < 5; i++) {
+            setTimeout(connectWebSocket, 2000);
+        }
+    });
 
-    setSocket(socket)
-    return socket
+    setSocket(socket);
+    return socket;
 }
+
 
 function handleEvent(type, payload) {
     try {
@@ -80,7 +84,7 @@ function handleEvent(type, payload) {
                             players.push({
                                 nickname,
                                 is_master: nickname === payload.nickname,
-                                id: playerId,
+                                id: playerId ? Number(playerId) : null,
                             })
                         })
 
@@ -99,22 +103,25 @@ function handleEvent(type, payload) {
                 setCurrentNick(payload.current_player_nickname)
                 document.getElementById("room-code").textContent = payload.invite_code
 
-                updatePlayerMappings(payload.players)
+                // Make sure we properly map all players from the init event
+                if (payload.players && Array.isArray(payload.players)) {
+                    updatePlayerMappings(payload.players)
 
-                const initialScores = {}
-                payload.players.forEach((player) => {
-                    if (player.nickname) {
-                        initialScores[player.nickname] = player.points || 0
+                    const initialScores = {}
+                    payload.players.forEach((player) => {
+                        if (player.nickname) {
+                            initialScores[player.nickname] = player.points || 0
+                        }
+                    })
+                    setAllPlayersScores(initialScores)
+
+                    renderPlayersList(payload.players)
+
+                    const currentPlayer = payload.players.find((p) => p.nickname === payload.current_player_nickname)
+                    if (currentPlayer && currentPlayer.id) {
+                        console.log("Setting current player ID:", currentPlayer.id)
+                        setCurrentPlayerId(currentPlayer.id)
                     }
-                })
-                setAllPlayersScores(initialScores)
-
-                renderPlayersList(payload.players)
-
-                const currentPlayer = payload.players.find((p) => p.nickname === payload.current_player_nickname)
-                if (currentPlayer && currentPlayer.id) {
-                    console.log("Setting current player ID:", currentPlayer.id)
-                    setCurrentPlayerId(currentPlayer.id.toString())
                 }
 
                 if (payload.state_info && payload.state_info.choosing_player_id) {
@@ -137,9 +144,7 @@ function handleEvent(type, payload) {
 
             case "new_player":
                 console.log(`Event: ${type}`)
-                if (payload.id && payload.nickname) {
-                    updatePlayerMappings([{ id: payload.id, nickname: payload.nickname, points: 0 }])
-                }
+                updatePlayerMappings([{ id: payload.id, nickname: payload.nickname, points: payload.points || 0 }])
                 import("./ui-renderer.js").then(({ addPlayerToList }) => {
                     addPlayerToList(payload.nickname, payload.is_master, payload.id)
                 })
@@ -160,7 +165,7 @@ function handleEvent(type, payload) {
                     const choosingPlayerId = payload.state_info.choosing_player_id
 
                     import("./game-state.js").then(
-                        ({ setChoosingPlayerId, setCurrentAnswer, getNicknameById, currentNick, currentPlayerId }) => {
+                        ({ setChoosingPlayerId, setCurrentAnswer, getNicknameById, currentPlayerId }) => {
                             setChoosingPlayerId(choosingPlayerId)
 
                             console.log("Setting choosing player ID:", choosingPlayerId, "Current player ID:", currentPlayerId)
@@ -169,9 +174,7 @@ function handleEvent(type, payload) {
                                 setCurrentAnswer(payload.state_info.answer)
                             }
 
-                            // Make sure we preserve the is_guessed state of melodies
                             if (payload.categories) {
-                                // Ensure all categories have the is_guessed property for each melody
                                 payload.categories.forEach((category) => {
                                     if (category.melodies) {
                                         category.melodies.forEach((melody) => {
@@ -198,7 +201,7 @@ function handleEvent(type, payload) {
                                 const infoEl = document.getElementById("game-info")
                                 if (infoEl) {
                                     const choosingPlayerNickname = getNicknameById(choosingPlayerId)
-                                    if (String(currentPlayerId) === String(choosingPlayerId)) {
+                                    if (Number(currentPlayerId) === Number(choosingPlayerId)) {
                                         infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
                                     } else {
                                         infoEl.innerHTML = `<p>${choosingPlayerNickname} выбирает мелодию...</p>`
@@ -273,7 +276,7 @@ function handleEvent(type, payload) {
                         })
                     })
 
-                    import("./game-state.js").then(({ isHost, currentNick, isChoosingPlayer }) => {
+                    import("./game-state.js").then(({ isHost}) => {
                         if (isHost) {
                             playMelody(payload.link)
                         } else {
@@ -297,7 +300,7 @@ function handleEvent(type, payload) {
                 console.log(`Event: ${type}`)
 
                 if (payload.answering_player_nickname && payload.answer) {
-                    import("./game-state.js").then(({ isHost, currentAudioPlayer, markMelodyAsGuessed }) => {
+                    import("./game-state.js").then(({ isHost, currentAudioPlayer }) => {
                         if (isHost && currentAudioPlayer) {
                             currentAudioPlayer.pause()
 
@@ -326,7 +329,7 @@ function handleEvent(type, payload) {
                         }
                     })
 
-                    import("./ui-renderer.js").then(({ addPlayerAnswer, showAnswersContainer, updateCategoryButtons }) => {
+                    import("./ui-renderer.js").then(({ addPlayerAnswer, showAnswersContainer }) => {
                         import("./game-state.js").then(({ addPlayerToAnswered }) => {
                             addPlayerToAnswered(payload.answering_player_nickname)
                             showAnswersContainer()
@@ -383,7 +386,7 @@ function handleEvent(type, payload) {
                     ({ setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId }) => {
                         const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
 
-                        const choosingPlayerChanged = String(currentChoosingPlayerId) !== String(newChoosingPlayerId)
+                        const choosingPlayerChanged = Number(currentChoosingPlayerId) !== Number(newChoosingPlayerId)
 
                         setChoosingPlayerId(newChoosingPlayerId)
 
@@ -471,7 +474,6 @@ function handleEvent(type, payload) {
                     }
                 }
 
-                // Clear any existing game over timer
                 if (window.gameOverTimer) {
                     clearTimeout(window.gameOverTimer)
                     window.gameOverTimer = null
@@ -487,15 +489,14 @@ function handleEvent(type, payload) {
                      }) => {
                         const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
 
-                        const choosingPlayerChanged = String(currentChoosingPlayerId) !== String(newChoosingPlayerId)
+                        const choosingPlayerChanged = Number(currentChoosingPlayerId) !== Number(newChoosingPlayerId)
 
                         setChoosingPlayerId(newChoosingPlayerId)
 
-                        // Check if all melodies are guessed after accepting this answer
                         if (checkAllMelodiesGuessed()) {
                             console.log("All melodies guessed after accepting answer, showing game over screen")
                             showGameOverAfterDelay()
-                            return // Skip the rest of the function
+                            return
                         }
 
                         if (choosingPlayerChanged) {
@@ -588,7 +589,7 @@ function handleEvent(type, payload) {
                         ({ setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId }) => {
                             const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
 
-                            const choosingPlayerChanged = String(currentChoosingPlayerId) !== String(newChoosingPlayerId)
+                            const choosingPlayerChanged = Number(currentChoosingPlayerId) !== Number(newChoosingPlayerId)
 
                             setChoosingPlayerId(newChoosingPlayerId)
 
@@ -627,7 +628,7 @@ function handleEvent(type, payload) {
 
                                 setTimeout(() => {
                                     nextMessage.style.opacity = "0"
-                                    message.style.transition = "opacity 0.5s"
+                                    nextMessage.style.transition = "opacity 0.5s"
                                     setTimeout(() => nextMessage.remove(), 500)
                                 }, 3000)
                             }

@@ -1,15 +1,15 @@
 import {
-    initScreen,
-    joinScreen,
-    initNickInput,
-    joinNickInput,
-    joinInviteInput,
-    linkInput,
     addLinkBtn,
+    initNickInput,
+    initScreen,
+    joinInviteInput,
+    joinNickInput,
+    joinScreen,
+    linkInput,
     startBtn,
 } from "./dom-elements.js"
-import { showWaiting, createRoom, joinRoom, addPlaylistLink, startGame } from "./ui-manager.js"
-import { setCurrentNick, setCurrentCode, setIsHost } from "./game-state.js"
+import {addPlaylistLink, createRoom, joinRoom, showWaiting, startGame} from "./ui-manager.js"
+import {setCurrentCode, setCurrentNick, setIsHost} from "./game-state.js"
 
 function setupEventHandlers() {
     console.log("Setting up event handlers...")
@@ -29,6 +29,8 @@ function setupEventHandlers() {
 
     // Кнопка открытия экрана входа по коду
     document.getElementById("join-menu-btn").addEventListener("click", () => {
+        joinNickInput.value = initNickInput.value.trim()
+
         initScreen.classList.add("hidden")
         joinScreen.classList.remove("hidden")
     })

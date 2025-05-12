@@ -47,19 +47,27 @@ function loadSavedState() {
                 playersScores = JSON.parse(savedScores)
             }
             if (savedChoosingPlayerId) {
-                choosingPlayerId = savedChoosingPlayerId
+                choosingPlayerId = Number(savedChoosingPlayerId)
             }
             if (savedCurrentAnswer) {
                 currentAnswer = savedCurrentAnswer
             }
             if (savedPlayerIdMap) {
-                playerIdToNickname = JSON.parse(savedPlayerIdMap)
+                const parsedMap = JSON.parse(savedPlayerIdMap)
+                playerIdToNickname = {}
+                Object.keys(parsedMap).forEach((key) => {
+                    playerIdToNickname[Number(key)] = parsedMap[key]
+                })
             }
             if (savedPlayerNicknameMap) {
-                playerNicknameToId = JSON.parse(savedPlayerNicknameMap)
+                const parsedMap = JSON.parse(savedPlayerNicknameMap)
+                playerNicknameToId = {}
+                Object.keys(parsedMap).forEach((key) => {
+                    playerNicknameToId[key] = Number(parsedMap[key])
+                })
             }
             if (savedCurrentPlayerId) {
-                currentPlayerId = savedCurrentPlayerId
+                currentPlayerId = Number(savedCurrentPlayerId)
             }
             if (gameStarted) {
                 document.getElementById("logout-btn").classList.remove("hidden")
@@ -109,8 +117,8 @@ function saveState() {
     localStorage.setItem("guessthemelody_isHost", isHost ? "1" : "0")
     localStorage.setItem("guessthemelody_gameStarted", gameStarted ? "1" : "0")
 
-    if (currentPlayerId) {
-        localStorage.setItem("guessthemelody_currentPlayerId", currentPlayerId)
+    if (currentPlayerId !== null) {
+        localStorage.setItem("guessthemelody_currentPlayerId", String(currentPlayerId))
     }
 
     if (gameCategories) {
@@ -121,8 +129,8 @@ function saveState() {
         localStorage.setItem("guessthemelody_scores", JSON.stringify(playersScores))
     }
 
-    if (choosingPlayerId) {
-        localStorage.setItem("guessthemelody_choosingPlayerId", choosingPlayerId)
+    if (choosingPlayerId !== null) {
+        localStorage.setItem("guessthemelody_choosingPlayerId", String(choosingPlayerId))
     }
 
     if (currentAnswer) {
@@ -177,15 +185,25 @@ function isChoosingPlayer() {
         choosingPlayerIdType: typeof choosingPlayerId,
     })
 
-    if (!currentPlayerId || !choosingPlayerId) {
+    if (currentPlayerId === null || choosingPlayerId === null) {
         return false
     }
 
-    return String(currentPlayerId) === String(choosingPlayerId)
+    return Number(currentPlayerId) === Number(choosingPlayerId)
 }
 
 function getNicknameById(id) {
-    return playerIdToNickname[id] || id
+    if (id === null || id === undefined) return "Unknown Player"
+
+    const numericId = Number(id)
+    const nickname = playerIdToNickname[numericId]
+
+    if (nickname) {
+        return nickname
+    }
+
+    console.warn(`Could not find nickname for player ID: ${id} (${typeof id})`)
+    return "Unknown Player"
 }
 
 function hasPlayerAnswered() {
@@ -221,16 +239,29 @@ function getSortedPlayersByScore() {
 }
 
 function updatePlayerMappings(players) {
+    if (!players || !Array.isArray(players)) {
+        console.warn("Invalid players data for mapping:", players)
+        return
+    }
+
     players.forEach((player) => {
-        if (player.id && player.nickname) {
-            playerIdToNickname[player.id] = player.nickname
-            playerNicknameToId[player.nickname] = player.id
+        const playerId = player.id;
+
+        if (playerId !== undefined && player.nickname) {
+            const numericId = Number(playerId)
+            console.log(`Mapping player: ID ${numericId} (${typeof numericId}) -> ${player.nickname}`)
+
+            playerIdToNickname[numericId] = player.nickname
+            playerNicknameToId[player.nickname] = numericId
+        } else {
+            console.warn("Missing player ID or nickname:", player)
         }
     })
+
     saveState()
+    logPlayerMappings()
 }
 
-// Function to mark a melody as guessed
 function markMelodyAsGuessed(categoryName, points) {
     if (!gameCategories) return
 
@@ -248,11 +279,9 @@ function markMelodyAsGuessed(categoryName, points) {
     }
     saveState()
 
-    // Check if all melodies are guessed after marking this one
     checkAllMelodiesGuessed()
 }
 
-// Function to check if all melodies have been guessed
 function checkAllMelodiesGuessed() {
     if (!gameCategories) return false
 
@@ -275,15 +304,18 @@ function checkAllMelodiesGuessed() {
 
     console.log(`Checked melodies: ${guessedMelodies}/${totalMelodies} guessed, all guessed: ${allGuessed}`)
 
-    // Return true if all melodies are guessed, but don't show game over screen yet
     return allGuessed && totalMelodies > 0
 }
 
-// New function to show game over screen after delay or when called directly
 function showGameOverAfterDelay() {
     import("./ui-renderer.js").then(({ showGameOverScreen }) => {
         showGameOverScreen()
     })
+}
+
+function logPlayerMappings() {
+    console.log("Current player ID to nickname mappings:", playerIdToNickname)
+    console.log("Current player nickname to ID mappings:", playerNicknameToId)
 }
 
 import { showWaiting, showGame } from "./ui-manager.js"
@@ -319,6 +351,7 @@ export {
     markMelodyAsGuessed,
     checkAllMelodiesGuessed,
     showGameOverAfterDelay,
+    logPlayerMappings,
 }
 
 export function setSocket(newSocket) {
@@ -357,7 +390,8 @@ export function setCurrentMelody(melody) {
 }
 
 export function setChoosingPlayerId(id) {
-    choosingPlayerId = id
+    choosingPlayerId = id !== null ? Number(id) : null
+    console.log(`Setting choosing player ID: ${choosingPlayerId} (${typeof choosingPlayerId})`)
     saveState()
 }
 
@@ -371,6 +405,7 @@ export function setCurrentAudioPlayer(player) {
 }
 
 export function setCurrentPlayerId(id) {
-    currentPlayerId = id
+    currentPlayerId = id !== null ? Number(id) : null
+    console.log(`Setting current player ID: ${currentPlayerId} (${typeof currentPlayerId})`)
     saveState()
 }
