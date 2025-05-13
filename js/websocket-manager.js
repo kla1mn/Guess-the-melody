@@ -68,6 +68,8 @@ function handleEvent(type, payload) {
                     const isNewHost = payload.nickname === currentNick
                     setIsHost(isNewHost)
 
+                    updateLeaderboardTable(hostNickname)
+
                     const startBtn = document.getElementById("start-btn")
                     startBtn.classList.toggle("hidden", !isNewHost)
 
