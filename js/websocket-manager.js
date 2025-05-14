@@ -495,22 +495,23 @@ function handleEvent(type, payload) {
                             return
                         }
 
+                        console.log("Updating game info panel with choosing player:", payload.choosing_player)
+                        setTimeout(() => {
+                            const infoEl = document.getElementById("game-info")
+                            if (infoEl) {
+                                import("./game-state.js").then(({ isChoosingPlayer, getNicknameById, choosingPlayerId }) => {
+                                    if (isChoosingPlayer()) {
+                                        infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
+                                    } else {
+                                        const choosingPlayerName = getNicknameById(choosingPlayerId)
+                                        infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
+                                    }
+                                })
+                            }
+                        }, 300)
+
                         if (choosingPlayerChanged) {
                             console.log("Choosing player changed, updating UI")
-                            setTimeout(() => {
-                                const infoEl = document.getElementById("game-info")
-                                if (infoEl) {
-                                    import("./game-state.js").then(({ isChoosingPlayer, getNicknameById, choosingPlayerId }) => {
-                                        if (isChoosingPlayer()) {
-                                            infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
-                                        } else {
-                                            const choosingPlayerName = getNicknameById(choosingPlayerId)
-                                            infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
-                                        }
-                                    })
-                                }
-                            }, 300)
-
                             setTimeout(() => {
                                 import("./ui-renderer.js").then(({ renderCategories }) => {
                                     import("./game-state.js").then(({ gameCategories }) => {
@@ -642,7 +643,7 @@ function handleEvent(type, payload) {
                 console.log(`Event: ${type}`)
                 if (payload.message === "The game has already begun") {
                     alert("Потерпи, игра уже началась")
-                    import("./game-state.js").then(({setGameStarted}) => {
+                    import("./game-state.js").then(({ setGameStarted }) => {
                         setGameStarted(true)
                     })
                 } else if (payload.message === "Game is not started") {
