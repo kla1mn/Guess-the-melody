@@ -397,17 +397,17 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
             correctAnswerEl.textContent = `Правильный ответ: ${correctAnswer}`
             answerElement.appendChild(correctAnswerEl)
 
-            setTimeout(() => {
-                if (correctAnswerEl && correctAnswerEl.parentNode) {
-                    correctAnswerEl.style.opacity = "0"
-                    correctAnswerEl.style.transition = "opacity 0.5s"
-                    setTimeout(() => {
-                        if (correctAnswerEl && correctAnswerEl.parentNode) {
-                            correctAnswerEl.remove()
-                        }
-                    }, 500)
-                }
-            }, 3000)
+            // setTimeout(() => {
+            //     if (correctAnswerEl && correctAnswerEl.parentNode) {
+            //         correctAnswerEl.style.opacity = "0"
+            //         correctAnswerEl.style.transition = "opacity 0.5s"
+            //         setTimeout(() => {
+            //             if (correctAnswerEl && correctAnswerEl.parentNode) {
+            //                 correctAnswerEl.remove()
+            //             }
+            //         }, 500)
+            //     }
+            // }, 3000)
         }
 
         const buttonsContainer = document.createElement("div")
