@@ -13,6 +13,7 @@ let currentAnswer = null
 let playersScores = {}
 let playersAnswered = []
 let currentAudioPlayer = null
+let lastAnsweringPlayer = null
 
 let playerIdToNickname = {}
 let playerNicknameToId = {}
@@ -245,7 +246,7 @@ function updatePlayerMappings(players) {
     }
 
     players.forEach((player) => {
-        const playerId = player.id;
+        const playerId = player.id
 
         if (playerId !== undefined && player.nickname) {
             const numericId = Number(playerId)
@@ -336,6 +337,7 @@ export {
     playerIdToNickname,
     playerNicknameToId,
     currentPlayerId,
+    lastAnsweringPlayer,
     loadSavedState,
     saveState,
     clearState,
@@ -408,4 +410,8 @@ export function setCurrentPlayerId(id) {
     currentPlayerId = id !== null ? Number(id) : null
     console.log(`Setting current player ID: ${currentPlayerId} (${typeof currentPlayerId})`)
     saveState()
+}
+
+export function setLastAnsweringPlayer(nickname) {
+    lastAnsweringPlayer = nickname
 }

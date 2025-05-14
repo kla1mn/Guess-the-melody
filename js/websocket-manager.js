@@ -16,48 +16,47 @@ import {
 import { renderPlayersList, playMelody, updateScoreDisplay, clearAnswersContainer } from "./ui-renderer.js"
 import { showGame } from "./ui-manager.js"
 
-let socket = null;
+let socket = null
 
 function connectWebSocket() {
     if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
-        console.log("WS: уже подключён или в процессе подключения");
-        return socket;
+        console.log("WS: уже подключён или в процессе подключения")
+        return socket
     }
 
-    console.log("Подключение к вебсокету...");
-    socket = new WebSocket(WS_BACKEND);
+    console.log("Подключение к вебсокету...")
+    socket = new WebSocket(WS_BACKEND)
 
     socket.addEventListener("open", () => {
-        console.log("WS: подключено успешно");
-    });
+        console.log("WS: подключено успешно")
+    })
 
     socket.addEventListener("message", (event) => {
-        let msg;
+        let msg
         try {
-            msg = JSON.parse(event.data);
-            console.log(`Получено: ${JSON.stringify(msg)}`);
+            msg = JSON.parse(event.data)
+            console.log(`Получено: ${JSON.stringify(msg)}`)
         } catch (e) {
-            console.error("WS: некорректный JSON", event.data, e);
-            return;
+            console.error("WS: некорректный JSON", event.data, e)
+            return
         }
-        handleEvent(msg.type, msg.payload);
-    });
+        handleEvent(msg.type, msg.payload)
+    })
 
     socket.addEventListener("error", (e) => {
-        console.error("WS: ошибка", e);
-    });
+        console.error("WS: ошибка", e)
+    })
 
     socket.addEventListener("close", (e) => {
-        console.log("WS: закрыто соединение", e.reason);
-        for (let i =0; i < 5; i++) {
-            setTimeout(connectWebSocket, 2000);
+        console.log("WS: закрыто соединение", e.reason)
+        for (let i = 0; i < 5; i++) {
+            setTimeout(connectWebSocket, 2000)
         }
-    });
+    })
 
-    setSocket(socket);
-    return socket;
+    setSocket(socket)
+    return socket
 }
-
 
 function handleEvent(type, payload) {
     try {
@@ -67,8 +66,6 @@ function handleEvent(type, payload) {
                 import("./game-state.js").then(({ currentNick, setIsHost }) => {
                     const isNewHost = payload.nickname === currentNick
                     setIsHost(isNewHost)
-
-                    updateLeaderboardTable(hostNickname)
 
                     const startBtn = document.getElementById("start-btn")
                     startBtn.classList.toggle("hidden", !isNewHost)
@@ -273,7 +270,7 @@ function handleEvent(type, payload) {
                         })
                     })
 
-                    import("./game-state.js").then(({ isHost}) => {
+                    import("./game-state.js").then(({ isHost }) => {
                         if (isHost) {
                             playMelody(payload.link)
                         } else {
@@ -297,7 +294,9 @@ function handleEvent(type, payload) {
                 console.log(`Event: ${type}`)
 
                 if (payload.answering_player_nickname && payload.answer) {
-                    import("./game-state.js").then(({ isHost, currentAudioPlayer }) => {
+                    import("./game-state.js").then(({ isHost, currentAudioPlayer, setLastAnsweringPlayer }) => {
+                        setLastAnsweringPlayer(payload.answering_player_nickname)
+
                         if (isHost && currentAudioPlayer) {
                             currentAudioPlayer.pause()
 
@@ -344,41 +343,41 @@ function handleEvent(type, payload) {
 
             case "accept_answer_partially":
                 console.log(`Event: ${type}`)
-                if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
-                    const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
+                import("./game-state.js").then(({ lastAnsweringPlayer }) => {
+                    if (lastAnsweringPlayer) {
+                        setPlayerScore(lastAnsweringPlayer, payload.new_points)
+                        updateScoreDisplay(lastAnsweringPlayer, payload.new_points)
 
-                    setPlayerScore(lastPlayerNickname, payload.new_points)
-                    updateScoreDisplay(lastPlayerNickname, payload.new_points)
+                        import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+                            updateLeaderboardTable()
+                        })
 
-                    import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                        updateLeaderboardTable()
-                    })
+                        const existingMessages = document.querySelectorAll(".system-message")
+                        let isDuplicate = false
+                        existingMessages.forEach((msg) => {
+                            if (msg.textContent.includes(`Ответ игрока ${lastAnsweringPlayer} частично принят!`)) {
+                                isDuplicate = true
+                            }
+                        })
 
-                    const existingMessages = document.querySelectorAll(".system-message")
-                    let isDuplicate = false
-                    existingMessages.forEach((msg) => {
-                        if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} частично принят!`)) {
-                            isDuplicate = true
-                        }
-                    })
+                        if (!isDuplicate) {
+                            const message = document.createElement("div")
+                            message.className = "system-message"
+                            message.textContent = `Ответ игрока ${lastAnsweringPlayer} частично принят! Теперь у него ${payload.new_points} очков`
 
-                    if (!isDuplicate) {
-                        const message = document.createElement("div")
-                        message.className = "system-message"
-                        message.textContent = `Ответ игрока ${lastPlayerNickname} частично принят! Теперь у него ${payload.new_points} очков`
+                            const answersContainer = document.getElementById("answers-container")
+                            if (answersContainer) {
+                                answersContainer.appendChild(message)
 
-                        const answersContainer = document.getElementById("answers-container")
-                        if (answersContainer) {
-                            answersContainer.appendChild(message)
-
-                            setTimeout(() => {
-                                message.style.opacity = "0"
-                                message.style.transition = "opacity 0.5s"
-                                setTimeout(() => message.remove(), 500)
-                            }, 3000)
+                                setTimeout(() => {
+                                    message.style.opacity = "0"
+                                    message.style.transition = "opacity 0.5s"
+                                    setTimeout(() => message.remove(), 500)
+                                }, 3000)
+                            }
                         }
                     }
-                }
+                })
                 import("./game-state.js").then(
                     ({ setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId }) => {
                         const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
@@ -547,41 +546,41 @@ function handleEvent(type, payload) {
             case "reject_answer":
                 console.log(`Event: ${type}`)
                 try {
-                    if (payload.answered_players_nicknames && payload.answered_players_nicknames.length > 0) {
-                        const lastPlayerNickname = payload.answered_players_nicknames[payload.answered_players_nicknames.length - 1]
+                    import("./game-state.js").then(({ lastAnsweringPlayer }) => {
+                        if (lastAnsweringPlayer) {
+                            setPlayerScore(lastAnsweringPlayer, payload.new_points)
+                            updateScoreDisplay(lastAnsweringPlayer, payload.new_points)
 
-                        setPlayerScore(lastPlayerNickname, payload.new_points)
-                        updateScoreDisplay(lastPlayerNickname, payload.new_points)
+                            import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+                                updateLeaderboardTable()
+                            })
 
-                        import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                            updateLeaderboardTable()
-                        })
+                            const existingMessages = document.querySelectorAll(".system-message")
+                            let isDuplicate = false
+                            existingMessages.forEach((msg) => {
+                                if (msg.textContent.includes(`Ответ игрока ${lastAnsweringPlayer} отклонен!`)) {
+                                    isDuplicate = true
+                                }
+                            })
 
-                        const existingMessages = document.querySelectorAll(".system-message")
-                        let isDuplicate = false
-                        existingMessages.forEach((msg) => {
-                            if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} отклонен!`)) {
-                                isDuplicate = true
-                            }
-                        })
+                            if (!isDuplicate) {
+                                const message = document.createElement("div")
+                                message.className = "system-message"
+                                message.textContent = `Ответ игрока ${lastAnsweringPlayer} отклонен! Теперь у него ${payload.new_points} очков`
 
-                        if (!isDuplicate) {
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${lastPlayerNickname} отклонен! Теперь у него ${payload.new_points} очков`
+                                const answersContainer = document.getElementById("answers-container")
+                                if (answersContainer) {
+                                    answersContainer.appendChild(message)
 
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-
-                                setTimeout(() => {
-                                    message.style.opacity = "0"
-                                    message.style.transition = "opacity 0.5s"
-                                    setTimeout(() => message.remove(), 500)
-                                }, 3000)
+                                    setTimeout(() => {
+                                        message.style.opacity = "0"
+                                        message.style.transition = "opacity 0.5s"
+                                        setTimeout(() => message.remove(), 500)
+                                    }, 3000)
+                                }
                             }
                         }
-                    }
+                    })
                     import("./game-state.js").then(
                         ({ setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId }) => {
                             const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
@@ -643,13 +642,29 @@ function handleEvent(type, payload) {
                 console.log(`Event: ${type}`)
                 if (payload.message === "The game has already begun") {
                     alert("Потерпи, игра уже началась")
-
-                    import("./game-state.js").then(({ setGameStarted }) => {
+                    import("./game-state.js").then(({setGameStarted}) => {
                         setGameStarted(true)
                     })
+                } else if (payload.message === "Game is not started") {
+                    alert("Игра еще не началась")
+                } else if (payload.message === "Now another player chooses") {
+                    alert("Сейчас выбирает другой игрок")
+                } else if (payload.message === "Some player has already answered") {
+                    alert("Другой игрок уже ответил")
+                } else if (payload.message === "This song has been chosen before") {
+                    alert("Эту мелодию уже выбирали раньше")
+                } else if (payload.message === "User must be a master") {
+                    alert("Для этого действия надо быть хостом")
+                } else if (payload.message === "There must be at least two players in the game") {
+                    alert("В игре должен быть один хост и хотя бы один игрок")
+                } else if (payload.message === "At least one player must load the playlist to start the game") {
+                    alert("Хотя бы один игрок должен загрузить ссылку на плейлист Яндекс.Музыки")
                 } else {
                     alert(`Ошибка: ${payload.message}`)
                 }
+                break
+
+            case "heartbeat":
                 break
 
             default:

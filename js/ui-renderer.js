@@ -488,16 +488,6 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
 
     answersContainer.appendChild(answerElement)
 
-    setTimeout(() => {
-        answerElement.style.opacity = "0"
-        answerElement.style.transition = "opacity 0.5s"
-        setTimeout(() => {
-            if (answerElement && answerElement.parentNode) {
-                answerElement.remove()
-            }
-        }, 500)
-    }, 3000)
-
     answersContainer.scrollTop = answersContainer.scrollHeight
 }
 
@@ -519,18 +509,14 @@ function updateScoreDisplay(nickname, points) {
     updateLeaderboardTable()
 }
 
-function updateLeaderboardTable(hostNickname = null) {
+function updateLeaderboardTable() {
     console.log("Updating leaderboard table")
-    let sortedPlayers = getSortedPlayersByScore()
+    const sortedPlayers = getSortedPlayersByScore()
     const tbody = document.getElementById("leaderboard-tbody")
 
     if (!tbody) {
         console.error("Leaderboard tbody not found")
         return
-    }
-
-    if (hostNickname) {
-        sortedPlayers = sortedPlayers.filter(player => player.nickname !== hostNickname)
     }
 
     tbody.innerHTML = ""

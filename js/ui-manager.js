@@ -64,6 +64,7 @@ function showGame(categories) {
     joinScreen.classList.add("hidden")
     waitingScreen.classList.add("hidden")
     gameScreen.classList.remove("hidden")
+    connectWebSocket()
 }
 
 async function addPlaylistLink(link) {
@@ -71,7 +72,7 @@ async function addPlaylistLink(link) {
         return alert("Введите ссылку")
     }
 
-    const yaPlaylistRe = /^https:\/\/music\.yandex\.ru\/.*playlist.*/
+    const yaPlaylistRe = /^https:\/\/music\.yandex\..*\/.*playlist.*/
     if (!yaPlaylistRe.test(link)) {
         return alert("Некорректная ссылка. Пожалуйста, введите ссылку на плейлист Яндекс.Музыки")
     }
