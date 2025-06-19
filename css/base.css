@@ -193,7 +193,6 @@ button#start-btn:hover {
     transform: translateY(0);
 }
 
-/* Анимация для успешного копирования */
 .copy-code-btn.copied {
     background-color: #50c878;
     animation: copySuccess 0.3s ease;
