@@ -13,13 +13,7 @@ import {
     setGameStarted,
     setAllPlayersScores,
 } from "./game-state.js"
-import {
-    renderPlayersList,
-    playMelody,
-    updateScoreDisplay,
-    clearAnswersContainer,
-    hideAnswersContainerWithDelay,
-} from "./ui-renderer.js"
+import { renderPlayersList, playMelody, updateScoreDisplay, hideAnswersContainerWithDelay } from "./ui-renderer.js"
 import { showGame } from "./ui-manager.js"
 
 let socket = null
@@ -168,7 +162,9 @@ function initializeMelodies(categories) {
 
 function initializeGameComponents() {
     resetAnsweredPlayers()
-    clearAnswersContainer()
+    import("./ui-renderer.js").then(({ clearAnswersContainerSafely }) => {
+        clearAnswersContainerSafely()
+    })
 
     import("./ui-renderer.js").then(({ initializeLeaderboard }) => {
         initializeLeaderboard()
@@ -320,7 +316,11 @@ function handleEvent(type, payload) {
                         })
                     })
                 }
-                clearAnswersContainer()
+
+                // Используем безопасную очистку вместо обычной
+                import("./ui-renderer.js").then(({ clearAnswersContainerSafely }) => {
+                    clearAnswersContainerSafely()
+                })
 
                 if (payload.link) {
                     console.log("Playing melody from pick_melody event:", payload.link)

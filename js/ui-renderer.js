@@ -329,19 +329,68 @@ export function clearAnswersContainer() {
 }
 
 export function hideAnswersContainerWithDelay(delay = 3000) {
-    console.log(`Hiding answers container in ${delay}ms`)
+    console.log(`Scheduling to hide answers container in ${delay}ms`)
+
     setTimeout(() => {
         const answersContainer = document.getElementById("answers-container")
-        if (answersContainer && !answersContainer.classList.contains("hidden")) {
-            answersContainer.style.opacity = "0"
-            answersContainer.style.transition = "opacity 0.5s"
+        if (!answersContainer || answersContainer.classList.contains("hidden")) {
+            return
+        }
 
-            setTimeout(() => {
+        // Проверяем, есть ли активные кнопки управления ответами
+        const activeButtons = answersContainer.querySelectorAll(".answer-buttons")
+        if (activeButtons.length > 0) {
+            console.log("Found active answer buttons, not hiding container")
+            return
+        }
+
+        // Проверяем, есть ли новые ответы без обработки
+        const unprocessedAnswers = answersContainer.querySelectorAll(
+            ".player-answer:not(.accepted-answer):not(.partially-accepted-answer):not(.rejected-answer)",
+        )
+        if (unprocessedAnswers.length > 0) {
+            console.log("Found unprocessed answers, not hiding container")
+            return
+        }
+
+        console.log("Hiding answers container")
+        answersContainer.style.opacity = "0"
+        answersContainer.style.transition = "opacity 0.5s"
+
+        setTimeout(() => {
+            // Повторная проверка перед окончательным скрытием
+            const finalCheck = answersContainer.querySelectorAll(".answer-buttons")
+            if (finalCheck.length === 0) {
                 answersContainer.classList.add("hidden")
                 answersContainer.style.opacity = "1"
-            }, 500)
-        }
+            } else {
+                // Если появились новые кнопки, возвращаем видимость
+                answersContainer.style.opacity = "1"
+            }
+        }, 500)
     }, delay)
+}
+
+export function clearAnswersContainerSafely() {
+    const answersContainer = document.getElementById("answers-container")
+    if (!answersContainer) return
+
+    // Проверяем, есть ли активные кнопки управления
+    const activeButtons = answersContainer.querySelectorAll(".answer-buttons")
+    if (activeButtons.length > 0) {
+        console.log("Not clearing answers container - has active buttons")
+        return
+    }
+
+    console.log("Safely clearing answers container")
+    answersContainer.style.opacity = "0"
+    answersContainer.style.transition = "opacity 0.3s"
+
+    setTimeout(() => {
+        answersContainer.innerHTML = ""
+        answersContainer.classList.add("hidden")
+        answersContainer.style.opacity = "1"
+    }, 300)
 }
 
 export function showAnswersContainer() {
@@ -374,10 +423,14 @@ export function addPlayerAnswer(nickname, answer, correctAnswer) {
         hideAnswerInterface()
     }
 
+    // Удаляем существующие ответы этого игрока, но сохраняем те, у которых есть активные кнопки
     const existingAnswers = answersContainer.querySelectorAll(".player-answer")
     existingAnswers.forEach((el) => {
         if (el.dataset.player === nickname) {
-            el.remove()
+            const hasActiveButtons = el.querySelector(".answer-buttons")
+            if (!hasActiveButtons) {
+                el.remove()
+            }
         }
     })
 
@@ -505,6 +558,21 @@ export function addPlayerAnswer(nickname, answer, correctAnswer) {
     answersContainer.appendChild(answerElement)
 
     answersContainer.scrollTop = answersContainer.scrollHeight
+
+    // Автоматически скрываем ответ через 5 секунд для обычных игроков
+    if (!isHost) {
+        setTimeout(() => {
+            if (answerElement && answerElement.parentNode) {
+                answerElement.style.opacity = "0"
+                answerElement.style.transition = "opacity 0.5s"
+                setTimeout(() => {
+                    if (answerElement && answerElement.parentNode) {
+                        answerElement.remove()
+                    }
+                }, 500)
+            }
+        }, 5000)
+    }
 }
 
 export function updateScoreDisplay(nickname, points) {
