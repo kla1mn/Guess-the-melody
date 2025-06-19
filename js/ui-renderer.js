@@ -314,20 +314,6 @@ export function hideAnswerInterface() {
     }
 }
 
-export function clearAnswersContainer() {
-    const answersContainer = document.getElementById("answers-container")
-    if (answersContainer) {
-        answersContainer.style.opacity = "0"
-        answersContainer.style.transition = "opacity 0.3s"
-
-        setTimeout(() => {
-            answersContainer.innerHTML = ""
-            answersContainer.classList.add("hidden")
-            answersContainer.style.opacity = "1"
-        }, 300)
-    }
-}
-
 export function hideAnswersContainerWithDelay(delay = 3000) {
     console.log(`Scheduling to hide answers container in ${delay}ms`)
 
@@ -337,14 +323,12 @@ export function hideAnswersContainerWithDelay(delay = 3000) {
             return
         }
 
-        // Проверяем, есть ли активные кнопки управления ответами
         const activeButtons = answersContainer.querySelectorAll(".answer-buttons")
         if (activeButtons.length > 0) {
             console.log("Found active answer buttons, not hiding container")
             return
         }
 
-        // Проверяем, есть ли новые ответы без обработки
         const unprocessedAnswers = answersContainer.querySelectorAll(
             ".player-answer:not(.accepted-answer):not(.partially-accepted-answer):not(.rejected-answer)",
         )
@@ -358,13 +342,11 @@ export function hideAnswersContainerWithDelay(delay = 3000) {
         answersContainer.style.transition = "opacity 0.5s"
 
         setTimeout(() => {
-            // Повторная проверка перед окончательным скрытием
             const finalCheck = answersContainer.querySelectorAll(".answer-buttons")
             if (finalCheck.length === 0) {
                 answersContainer.classList.add("hidden")
                 answersContainer.style.opacity = "1"
             } else {
-                // Если появились новые кнопки, возвращаем видимость
                 answersContainer.style.opacity = "1"
             }
         }, 500)
@@ -375,7 +357,6 @@ export function clearAnswersContainerSafely() {
     const answersContainer = document.getElementById("answers-container")
     if (!answersContainer) return
 
-    // Проверяем, есть ли активные кнопки управления
     const activeButtons = answersContainer.querySelectorAll(".answer-buttons")
     if (activeButtons.length > 0) {
         console.log("Not clearing answers container - has active buttons")
@@ -405,23 +386,18 @@ export function showAnswersContainer() {
     }
 }
 
-// Функция для проверки и скрытия пустого контейнера
 export function checkAndHideEmptyContainer() {
     const answersContainer = document.getElementById("answers-container")
     if (!answersContainer) return
 
-    // Считаем только видимые ответы (не системные сообщения)
     const visibleAnswers = answersContainer.querySelectorAll(".player-answer")
-    const systemMessages = answersContainer.querySelectorAll(".system-message")
 
-    // Если нет видимых ответов игроков, скрываем контейнер
     if (visibleAnswers.length === 0) {
         console.log("No visible player answers, hiding container")
         answersContainer.style.opacity = "0"
         answersContainer.style.transition = "opacity 0.3s"
 
         setTimeout(() => {
-            // Повторная проверка перед скрытием
             const finalCheck = answersContainer.querySelectorAll(".player-answer")
             if (finalCheck.length === 0) {
                 answersContainer.classList.add("hidden")
@@ -451,7 +427,6 @@ export function addPlayerAnswer(nickname, answer, correctAnswer) {
         hideAnswerInterface()
     }
 
-    // Удаляем существующие ответы этого игрока, но сохраняем те, у которых есть активные кнопки
     const existingAnswers = answersContainer.querySelectorAll(".player-answer")
     existingAnswers.forEach((el) => {
         if (el.dataset.player === nickname) {
@@ -587,7 +562,6 @@ export function addPlayerAnswer(nickname, answer, correctAnswer) {
 
     answersContainer.scrollTop = answersContainer.scrollHeight
 
-    // Автоматически скрываем ответ через 5 секунд для обычных игроков
     if (!isHost) {
         setTimeout(() => {
             if (answerElement && answerElement.parentNode) {
@@ -596,7 +570,6 @@ export function addPlayerAnswer(nickname, answer, correctAnswer) {
                 setTimeout(() => {
                     if (answerElement && answerElement.parentNode) {
                         answerElement.remove()
-                        // Проверяем, не стал ли контейнер пустым после удаления
                         checkAndHideEmptyContainer()
                     }
                 }, 500)
@@ -745,7 +718,6 @@ export function showGameOverScreen() {
         const winnerScoreEl = document.getElementById("winner-score")
 
         if (winnerNameEl && winnerScoreEl) {
-            // Handle null/undefined winner nickname
             const winnerName = winner.nickname || "Unknown Player"
             winnerNameEl.textContent = winnerName
             winnerScoreEl.textContent = `${winner.score || 0} очков`
@@ -801,54 +773,5 @@ export function showGameOverScreen() {
         gameOverModal.classList.remove("hidden")
         gameOverModal.style.display = "flex"
 
-        addConfettiEffect()
     })
-}
-
-function addConfettiEffect() {
-    const confettiCount = 200
-    const container = document.body
-
-    for (let i = 0; i < confettiCount; i++) {
-        const confetti = document.createElement("div")
-        confetti.style.position = "fixed"
-        confetti.style.width = `${Math.random() * 10 + 5}px`
-        confetti.style.height = `${Math.random() * 10 + 5}px`
-        confetti.style.backgroundColor = getRandomColor()
-        confetti.style.borderRadius = "50%"
-        confetti.style.left = `${Math.random() * 100}vw`
-        confetti.style.top = "-10px"
-        confetti.style.zIndex = "1999"
-        confetti.style.opacity = Math.random() * 0.7 + 0.3
-        confetti.style.animation = `fall ${Math.random() * 3 + 2}s linear forwards`
-
-        container.appendChild(confetti)
-
-        setTimeout(() => {
-            if (confetti.parentNode) {
-                confetti.parentNode.removeChild(confetti)
-            }
-        }, 5000)
-    }
-
-    if (!document.getElementById("confetti-style")) {
-        const style = document.createElement("style")
-        style.id = "confetti-style"
-        style.innerHTML = `
-      @keyframes fall {
-        0% {
-          transform: translateY(0) rotate(0deg);
-        }
-        100% {
-          transform: translateY(100vh) rotate(720deg);
-        }
-      }
-    `
-        document.head.appendChild(style)
-    }
-}
-
-function getRandomColor() {
-    const colors = ["#ff5c00", "#ffd700", "#4a90e2", "#50c878", "#e94e77", "#9370db"]
-    return colors[Math.floor(Math.random() * colors.length)]
 }
