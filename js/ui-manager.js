@@ -47,12 +47,11 @@ export function showGame(categories) {
     console.log("Showing game screen with categories:", categories)
     setGameStarted(true)
     setGameCategories(categories)
-    import("./game-state.js").then(({ isHost }) => {
-        if (isHost) {
-            answerForm.classList.add("hidden")
-            answersContainer.classList.remove("hidden")
-        }
-    })
+
+    if (isHost) {
+        answerForm.classList.add("hidden")
+        answersContainer.classList.remove("hidden")
+    }
 
     setTimeout(() => {
         if (categories) {

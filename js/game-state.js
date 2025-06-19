@@ -100,10 +100,15 @@ export function loadSavedState() {
 
         if (gameStarted && gameCategories) {
             console.log("Game already started, showing game screen")
-            showGame(gameCategories)
+            // Импортируем функцию только когда она нужна
+            import("./ui-manager.js").then(({ showGame }) => {
+                showGame(gameCategories)
+            })
         } else {
             console.log("Game not started, showing waiting screen")
-            showWaiting()
+            import("./ui-manager.js").then(({ showWaiting }) => {
+                showWaiting()
+            })
         }
 
         return true
@@ -321,8 +326,6 @@ export function logPlayerMappings() {
     console.log("Current player ID to nickname mappings:", playerIdToNickname)
     console.log("Current player nickname to ID mappings:", playerNicknameToId)
 }
-
-import { showWaiting, showGame } from "./ui-manager.js"
 
 export function setSocket(newSocket) {
     socket = newSocket

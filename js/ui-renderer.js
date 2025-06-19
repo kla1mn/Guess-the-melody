@@ -8,53 +8,55 @@ import {
     setCurrentAudioPlayer,
     addPlayerToAnswered,
     getSortedPlayersByScore,
+    gameStarted,
+    logPlayerMappings,
+    choosingPlayerId,
+    getNicknameById,
+    gameCategories,
+    checkAllMelodiesGuessed,
+    showGameOverAfterDelay,
 } from "./game-state.js"
 import { playersListEl, categoriesCt } from "./dom-elements.js"
+import { transferHost } from "./websocket-manager.js"
 
 export function renderPlayersList(players) {
     playersListEl.innerHTML = ""
 
-    import("./game-state.js").then(({ isHost, currentNick, gameStarted, logPlayerMappings }) => {
-        logPlayerMappings()
+    logPlayerMappings()
 
-        players.forEach((p) => {
-            const li = document.createElement("li")
-            li.className = "player-list-item"
+    players.forEach((p) => {
+        const li = document.createElement("li")
+        li.className = "player-list-item"
 
-            const playerInfo = document.createElement("span")
-            playerInfo.textContent = p.nickname + (p.is_master ? " (хост)" : "")
-            li.appendChild(playerInfo)
+        const playerInfo = document.createElement("span")
+        playerInfo.textContent = p.nickname + (p.is_master ? " (хост)" : "")
+        li.appendChild(playerInfo)
 
-            const playerId = p.id
-            if (playerId !== undefined) {
-                li.dataset.playerId = String(playerId)
+        const playerId = p.id
+        if (playerId !== undefined) {
+            li.dataset.playerId = String(playerId)
+        }
+
+        if (gameStarted && playersScores[p.nickname] !== undefined) {
+            playerInfo.textContent += ` - ${playersScores[p.nickname]} очков`
+        }
+
+        if (playerId !== undefined && choosingPlayerId !== null && Number(playerId) === Number(choosingPlayerId)) {
+            li.classList.add("choosing-player")
+            playerInfo.textContent += " (выбирает мелодию)"
+        }
+
+        if (isHost && !p.is_master && !gameStarted && p.nickname !== currentNick) {
+            const transferBtn = document.createElement("button")
+            transferBtn.textContent = "Сделать хостом"
+            transferBtn.className = "transfer-host-btn"
+            transferBtn.onclick = () => {
+                transferHost(p.nickname)
             }
+            li.appendChild(transferBtn)
+        }
 
-            if (gameStarted && playersScores[p.nickname] !== undefined) {
-                playerInfo.textContent += ` - ${playersScores[p.nickname]} очков`
-            }
-
-            import("./game-state.js").then(({ choosingPlayerId }) => {
-                if (playerId !== undefined && choosingPlayerId !== null && Number(playerId) === Number(choosingPlayerId)) {
-                    li.classList.add("choosing-player")
-                    playerInfo.textContent += " (выбирает мелодию)"
-                }
-            })
-
-            if (isHost && !p.is_master && !gameStarted && p.nickname !== currentNick) {
-                const transferBtn = document.createElement("button")
-                transferBtn.textContent = "Сделать хостом"
-                transferBtn.className = "transfer-host-btn"
-                transferBtn.onclick = () => {
-                    import("./websocket-manager.js").then(({ transferHost }) => {
-                        transferHost(p.nickname)
-                    })
-                }
-                li.appendChild(transferBtn)
-            }
-
-            playersListEl.appendChild(li)
-        })
+        playersListEl.appendChild(li)
     })
 }
 
@@ -71,30 +73,24 @@ export function addPlayerToList(nickname, isMaster = false, playerId = null) {
         console.log(`Adding player to list with ID: ${playerId}, nickname: ${nickname}`)
     }
 
-    import("./game-state.js").then(({ gameStarted, playersScores, isHost, currentNick }) => {
-        if (gameStarted && playersScores[nickname] !== undefined) {
-            playerInfo.textContent += ` - ${playersScores[nickname]} очков`
-        }
+    if (gameStarted && playersScores[nickname] !== undefined) {
+        playerInfo.textContent += ` - ${playersScores[nickname]} очков`
+    }
 
-        if (isHost && !isMaster && !gameStarted && nickname !== currentNick) {
-            const transferBtn = document.createElement("button")
-            transferBtn.textContent = "Сделать хостом"
-            transferBtn.className = "transfer-host-btn"
-            transferBtn.onclick = () => {
-                import("./websocket-manager.js").then(({ transferHost }) => {
-                    transferHost(nickname)
-                })
-            }
-            li.appendChild(transferBtn)
+    if (isHost && !isMaster && !gameStarted && nickname !== currentNick) {
+        const transferBtn = document.createElement("button")
+        transferBtn.textContent = "Сделать хостом"
+        transferBtn.className = "transfer-host-btn"
+        transferBtn.onclick = () => {
+            transferHost(nickname)
         }
-    })
+        li.appendChild(transferBtn)
+    }
 
-    import("./game-state.js").then(({ choosingPlayerId }) => {
-        if (playerId !== null && choosingPlayerId !== null && Number(playerId) === Number(choosingPlayerId)) {
-            li.classList.add("choosing-player")
-            playerInfo.textContent += " (выбирает мелодию)"
-        }
-    })
+    if (playerId !== null && choosingPlayerId !== null && Number(playerId) === Number(choosingPlayerId)) {
+        li.classList.add("choosing-player")
+        playerInfo.textContent += " (выбирает мелодию)"
+    }
 
     playersListEl.appendChild(li)
 }
@@ -148,26 +144,24 @@ export function renderCategories(categories) {
     infoEl.className = "game-info"
     categoriesCt.appendChild(infoEl)
 
-    import("./game-state.js").then(({ isHost, isChoosingPlayer, choosingPlayerId, getNicknameById }) => {
-        const isChoosing = isChoosingPlayer()
-        console.log("Current player is choosing:", isChoosing, "choosingPlayerId:", choosingPlayerId)
+    const isChoosing = isChoosingPlayer()
+    console.log("Current player is choosing:", isChoosing, "choosingPlayerId:", choosingPlayerId)
 
-        if (isChoosing) {
-            infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
-        } else {
-            const choosingPlayerName = getNicknameById(choosingPlayerId)
-            infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
-        }
+    if (isChoosing) {
+        infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
+    } else {
+        const choosingPlayerName = getNicknameById(choosingPlayerId)
+        infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
+    }
 
-        if (isChoosing || isHost) {
-            console.log("Showing categories for choosing player or host")
-            renderCategoryCards(categories)
-        } else {
-            console.log("Not showing categories - player is not choosing and not host")
-            const categoryCards = categoriesCt.querySelectorAll(".category-card")
-            categoryCards.forEach((card) => card.remove())
-        }
-    })
+    if (isChoosing || isHost) {
+        console.log("Showing categories for choosing player or host")
+        renderCategoryCards(categories)
+    } else {
+        console.log("Not showing categories - player is not choosing and not host")
+        const categoryCards = categoriesCt.querySelectorAll(".category-card")
+        categoryCards.forEach((card) => card.remove())
+    }
 }
 
 function setCategoryBackground(card, categoryName) {
@@ -218,21 +212,19 @@ function renderCategoryCards(categories) {
 
                 btn.addEventListener("click", () => {
                     console.log("Melody button clicked:", m)
-                    import("./game-state.js").then(({ socket, isChoosingPlayer, isHost }) => {
-                        if (socket && (isChoosingPlayer() || isHost)) {
-                            const message = {
-                                type: "pick_melody",
-                                payload: {
-                                    category: cat.category_name,
-                                    melody: m.name || `Мелодия ${m.points}`,
-                                    points: m.points,
-                                    link: m.link,
-                                },
-                            }
-                            console.log("Sending message:", message)
-                            socket.send(JSON.stringify(message))
+                    if (socket && (isChoosingPlayer() || isHost)) {
+                        const message = {
+                            type: "pick_melody",
+                            payload: {
+                                category: cat.category_name,
+                                melody: m.name || `Мелодия ${m.points}`,
+                                points: m.points,
+                                link: m.link,
+                            },
                         }
-                    })
+                        console.log("Sending message:", message)
+                        socket.send(JSON.stringify(message))
+                    }
                 })
                 btns.appendChild(btn)
             })
@@ -270,17 +262,13 @@ export function playMelody(link, startTime = 0, maxDuration = 30) {
         window.gameOverTimer = null
     }
 
-    import("./game-state.js").then(({ checkAllMelodiesGuessed }) => {
-        if (checkAllMelodiesGuessed()) {
-            console.log("This is the last melody, setting timer for game over screen")
-            window.gameOverTimer = setTimeout(() => {
-                import("./game-state.js").then(({ showGameOverAfterDelay }) => {
-                    console.log("30 seconds passed after last melody, showing game over screen")
-                    showGameOverAfterDelay()
-                })
-            }, maxDuration * 1000)
-        }
-    })
+    if (checkAllMelodiesGuessed()) {
+        console.log("This is the last melody, setting timer for game over screen")
+        window.gameOverTimer = setTimeout(() => {
+            console.log("30 seconds passed after last melody, showing game over screen")
+            showGameOverAfterDelay()
+        }, maxDuration * 1000)
+    }
 
     onTimeUpdate = () => {
         if (audioPlayer.currentTime >= startTime + maxDuration) {
@@ -468,18 +456,6 @@ export function addPlayerAnswer(nickname, answer, correctAnswer) {
             correctAnswerEl.className = "correct-answer"
             correctAnswerEl.textContent = `Правильный ответ: ${correctAnswer}`
             answerElement.appendChild(correctAnswerEl)
-
-            // setTimeout(() => {
-            //     if (correctAnswerEl && correctAnswerEl.parentNode) {
-            //         correctAnswerEl.style.opacity = "0"
-            //         correctAnswerEl.style.transition = "opacity 0.5s"
-            //         setTimeout(() => {
-            //             if (correctAnswerEl && correctAnswerEl.parentNode) {
-            //                 correctAnswerEl.remove()
-            //             }
-            //         }, 500)
-            //     }
-            // }, 3000)
         }
 
         const buttonsContainer = document.createElement("div")
@@ -671,27 +647,25 @@ export function showLeaderboard() {
 }
 
 export function updateCategoryButtons() {
-    import("./game-state.js").then(({ gameCategories }) => {
-        if (!gameCategories) return
+    if (!gameCategories) return
 
-        const categoryCards = document.querySelectorAll(".category-card")
-        categoryCards.forEach((card) => {
-            const categoryName = card.querySelector("h3").textContent
-            const buttons = card.querySelectorAll(".buttons button")
+    const categoryCards = document.querySelectorAll(".category-card")
+    categoryCards.forEach((card) => {
+        const categoryName = card.querySelector("h3").textContent
+        const buttons = card.querySelectorAll(".buttons button")
 
-            const category = gameCategories.find((c) => c.category_name === categoryName)
-            if (category && category.melodies) {
-                buttons.forEach((btn, index) => {
-                    if (index < category.melodies.length) {
-                        const melody = category.melodies[index]
-                        if (melody.is_guessed) {
-                            btn.disabled = true
-                            btn.style.opacity = "0.5"
-                        }
+        const category = gameCategories.find((c) => c.category_name === categoryName)
+        if (category && category.melodies) {
+            buttons.forEach((btn, index) => {
+                if (index < category.melodies.length) {
+                    const melody = category.melodies[index]
+                    if (melody.is_guessed) {
+                        btn.disabled = true
+                        btn.style.opacity = "0.5"
                     }
-                })
-            }
-        })
+                }
+            })
+        }
     })
 }
 
@@ -704,74 +678,71 @@ export function showGameOverScreen() {
         return
     }
 
-    import("./game-state.js").then(({ getSortedPlayersByScore, currentNick }) => {
-        const sortedPlayers = getSortedPlayersByScore()
+    const sortedPlayers = getSortedPlayersByScore()
 
-        if (sortedPlayers.length === 0) {
-            console.error("No player scores available for game over screen")
-            return
+    if (sortedPlayers.length === 0) {
+        console.error("No player scores available for game over screen")
+        return
+    }
+
+    const winner = sortedPlayers[0]
+
+    const winnerNameEl = document.getElementById("winner-name")
+    const winnerScoreEl = document.getElementById("winner-score")
+
+    if (winnerNameEl && winnerScoreEl) {
+        const winnerName = winner.nickname || "Unknown Player"
+        winnerNameEl.textContent = winnerName
+        winnerScoreEl.textContent = `${winner.score || 0} очков`
+
+        if (winnerName === currentNick) {
+            winnerNameEl.style.textShadow = "0 0 10px rgba(255, 215, 0, 0.8)"
+            document.getElementById("winner-container").style.animation = "winner-glow 1s infinite alternate"
         }
+    }
 
-        const winner = sortedPlayers[0]
+    const finalResultsTbody = document.getElementById("final-results-tbody")
+    if (finalResultsTbody) {
+        finalResultsTbody.innerHTML = ""
 
-        const winnerNameEl = document.getElementById("winner-name")
-        const winnerScoreEl = document.getElementById("winner-score")
+        sortedPlayers.forEach((player, index) => {
+            const row = document.createElement("tr")
 
-        if (winnerNameEl && winnerScoreEl) {
-            const winnerName = winner.nickname || "Unknown Player"
-            winnerNameEl.textContent = winnerName
-            winnerScoreEl.textContent = `${winner.score || 0} очков`
-
-            if (winnerName === currentNick) {
-                winnerNameEl.style.textShadow = "0 0 10px rgba(255, 215, 0, 0.8)"
-                document.getElementById("winner-container").style.animation = "winner-glow 1s infinite alternate"
+            if (player.nickname === currentNick) {
+                row.classList.add("current-player")
             }
-        }
 
-        const finalResultsTbody = document.getElementById("final-results-tbody")
-        if (finalResultsTbody) {
-            finalResultsTbody.innerHTML = ""
+            if (index < 3) {
+                row.classList.add(`rank-${index + 1}`)
+            }
 
-            sortedPlayers.forEach((player, index) => {
-                const row = document.createElement("tr")
+            const rankCell = document.createElement("td")
+            rankCell.textContent = (index + 1).toString()
 
-                if (player.nickname === currentNick) {
-                    row.classList.add("current-player")
-                }
+            const nameCell = document.createElement("td")
+            nameCell.textContent = player.nickname || "Unknown Player"
 
-                if (index < 3) {
-                    row.classList.add(`rank-${index + 1}`)
-                }
+            const scoreCell = document.createElement("td")
+            scoreCell.textContent = player.score.toString()
+            scoreCell.classList.add("score-cell")
 
-                const rankCell = document.createElement("td")
-                rankCell.textContent = (index + 1).toString()
+            row.appendChild(rankCell)
+            row.appendChild(nameCell)
+            row.appendChild(scoreCell)
+            finalResultsTbody.appendChild(row)
+        })
+    }
 
-                const nameCell = document.createElement("td")
-                nameCell.textContent = player.nickname || "Unknown Player"
-
-                const scoreCell = document.createElement("td")
-                scoreCell.textContent = player.score.toString()
-                scoreCell.classList.add("score-cell")
-
-                row.appendChild(rankCell)
-                row.appendChild(nameCell)
-                row.appendChild(scoreCell)
-                finalResultsTbody.appendChild(row)
+    const exitGameBtn = document.getElementById("exit-game-btn")
+    if (exitGameBtn) {
+        exitGameBtn.onclick = () => {
+            import("./game-state.js").then(({ clearState }) => {
+                clearState()
+                window.location.reload()
             })
         }
+    }
 
-        const exitGameBtn = document.getElementById("exit-game-btn")
-        if (exitGameBtn) {
-            exitGameBtn.onclick = () => {
-                import("./game-state.js").then(({ clearState }) => {
-                    clearState()
-                    window.location.reload()
-                })
-            }
-        }
-
-        gameOverModal.classList.remove("hidden")
-        gameOverModal.style.display = "flex"
-
-    })
+    gameOverModal.classList.remove("hidden")
+    gameOverModal.style.display = "flex"
 }

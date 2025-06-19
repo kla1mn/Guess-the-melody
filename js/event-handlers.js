@@ -17,9 +17,15 @@ import {
     startBtn,
 } from "./dom-elements.js"
 import { addPlaylistLink, createRoom, joinRoom, showWaiting, startGame } from "./ui-manager.js"
-import { setCurrentCode, setCurrentNick, setIsHost } from "./game-state.js"
-
-const getGameState = () => import("./game-state.js")
+import {
+    setCurrentCode,
+    setCurrentNick,
+    setIsHost,
+    socket,
+    currentCode,
+    clearState,
+    currentNick,
+} from "./game-state.js"
 
 async function handleCreateRoom() {
     const nickname = initNickInput.value.trim()
@@ -67,24 +73,21 @@ function handleAddPlaylist() {
     }
 }
 
-async function handleStartGame() {
-    const { socket } = await getGameState()
+function handleStartGame() {
     startGame(socket)
 }
 
-async function handleLeaveRoom() {
-    const { clearState } = await getGameState()
+function handleLeaveRoom() {
     clearState()
     window.location.reload()
 }
 
-async function handleAnswerSubmission(event) {
+function handleAnswerSubmission(event) {
     event.preventDefault()
 
     const answer = answerInput?.value.trim()
     if (!answer) return
 
-    const { socket, currentNick } = await getGameState()
     if (socket) {
         socket.send(
             JSON.stringify({
@@ -99,8 +102,7 @@ async function handleAnswerSubmission(event) {
     }
 }
 
-async function handleCopyCode() {
-    const { currentCode } = await getGameState()
+function handleCopyCode() {
     const copyBtn = document.getElementById("copy-code-btn")
 
     if (!currentCode) {
@@ -108,30 +110,9 @@ async function handleCopyCode() {
         return
     }
 
-    try {
-        await navigator.clipboard.writeText(currentCode)
-
-        // Визуальная обратная связь
-        copyBtn.classList.add("copied")
-        copyBtn.textContent = "✓"
-
-        setTimeout(() => {
-            copyBtn.classList.remove("copied")
-            copyBtn.textContent = "📋"
-        }, 1000)
-
-        console.log("Room code copied to clipboard:", currentCode)
-    } catch (err) {
-        console.error("Failed to copy room code:", err)
-
-        // Fallback для старых браузеров
-        const textArea = document.createElement("textarea")
-        textArea.value = currentCode
-        document.body.appendChild(textArea)
-        textArea.select()
-
-        try {
-            document.execCommand("copy")
+    navigator.clipboard
+        .writeText(currentCode)
+        .then(() => {
             copyBtn.classList.add("copied")
             copyBtn.textContent = "✓"
 
@@ -139,13 +120,34 @@ async function handleCopyCode() {
                 copyBtn.classList.remove("copied")
                 copyBtn.textContent = "📋"
             }, 1000)
-        } catch (fallbackErr) {
-            console.error("Fallback copy failed:", fallbackErr)
-            alert("Не удалось скопировать код. Попробуйте выделить и скопировать вручную.")
-        }
 
-        document.body.removeChild(textArea)
-    }
+            console.log("Room code copied to clipboard:", currentCode)
+        })
+        .catch((err) => {
+            console.error("Failed to copy room code:", err)
+
+            // Fallback для старых браузеров
+            const textArea = document.createElement("textarea")
+            textArea.value = currentCode
+            document.body.appendChild(textArea)
+            textArea.select()
+
+            try {
+                document.execCommand("copy")
+                copyBtn.classList.add("copied")
+                copyBtn.textContent = "✓"
+
+                setTimeout(() => {
+                    copyBtn.classList.remove("copied")
+                    copyBtn.textContent = "📋"
+                }, 1000)
+            } catch (fallbackErr) {
+                console.error("Fallback copy failed:", fallbackErr)
+                alert("Не удалось скопировать код. Попробуйте выделить и скопировать вручную.")
+            }
+
+            document.body.removeChild(textArea)
+        })
 }
 
 export function setupEventHandlers() {
