@@ -1,4 +1,3 @@
-// Game state variables
 export let socket = null
 export let currentNick = ""
 export let currentCode = ""
@@ -20,7 +19,6 @@ export let playerNicknameToId = {}
 
 export let currentPlayerId = null
 
-// Load saved state from localStorage
 export function loadSavedState() {
     const savedCode = localStorage.getItem("guessthemelody_code")
     const savedNick = localStorage.getItem("guessthemelody_nick")
@@ -84,23 +82,10 @@ export function loadSavedState() {
             currentPlayerId = null
         }
 
-        console.log("Loaded saved state:", {
-            currentCode,
-            currentNick,
-            isHost,
-            gameStarted,
-            hasCategories: !!gameCategories,
-            playersScores,
-            choosingPlayerId,
-            currentAnswer,
-            playerIdToNickname,
-            playerNicknameToId,
-            currentPlayerId,
-        })
+        console.log("Loaded saved state")
 
         if (gameStarted && gameCategories) {
             console.log("Game already started, showing game screen")
-            // Импортируем функцию только когда она нужна
             import("./ui-manager.js").then(({ showGame }) => {
                 showGame(gameCategories)
             })
@@ -110,11 +95,7 @@ export function loadSavedState() {
                 showWaiting()
             })
         }
-
-        return true
     }
-
-    return false
 }
 
 export function saveState() {
@@ -150,20 +131,6 @@ export function saveState() {
     if (Object.keys(playerNicknameToId).length > 0) {
         localStorage.setItem("guessthemelody_playerNicknameMap", JSON.stringify(playerNicknameToId))
     }
-
-    console.log("Saved state to localStorage:", {
-        currentCode,
-        currentNick,
-        isHost,
-        gameStarted,
-        hasCategories: !!gameCategories,
-        playersScores,
-        choosingPlayerId,
-        currentAnswer,
-        playerIdToNickname,
-        playerNicknameToId,
-        currentPlayerId,
-    })
 }
 
 export function clearState() {
@@ -183,14 +150,6 @@ export function clearState() {
 }
 
 export function isChoosingPlayer() {
-    console.log("Checking if current player is choosing:", {
-        currentNick,
-        currentPlayerId: currentPlayerId,
-        choosingPlayerId: choosingPlayerId,
-        currentPlayerIdType: typeof currentPlayerId,
-        choosingPlayerIdType: typeof choosingPlayerId,
-    })
-
     if (currentPlayerId === null || choosingPlayerId === null) {
         return false
     }
@@ -258,7 +217,6 @@ export function updatePlayerMappings(players) {
 
         if (playerId !== undefined && player.nickname) {
             const numericId = Number(playerId)
-            console.log(`Mapping player: ID ${numericId} (${typeof numericId}) -> ${player.nickname}`)
 
             playerIdToNickname[numericId] = player.nickname
             playerNicknameToId[player.nickname] = numericId
@@ -268,7 +226,6 @@ export function updatePlayerMappings(players) {
     })
 
     saveState()
-    logPlayerMappings()
 }
 
 export function markMelodyAsGuessed(categoryName, points) {
@@ -287,7 +244,6 @@ export function markMelodyAsGuessed(categoryName, points) {
         }
     }
     saveState()
-
     checkAllMelodiesGuessed()
 }
 
@@ -311,8 +267,6 @@ export function checkAllMelodiesGuessed() {
         }
     }
 
-    console.log(`Checked melodies: ${guessedMelodies}/${totalMelodies} guessed, all guessed: ${allGuessed}`)
-
     return allGuessed && totalMelodies > 0
 }
 
@@ -320,11 +274,6 @@ export function showGameOverAfterDelay() {
     import("./ui-renderer.js").then(({ showGameOverScreen }) => {
         showGameOverScreen()
     })
-}
-
-export function logPlayerMappings() {
-    console.log("Current player ID to nickname mappings:", playerIdToNickname)
-    console.log("Current player nickname to ID mappings:", playerNicknameToId)
 }
 
 export function setSocket(newSocket) {
@@ -364,7 +313,6 @@ export function setCurrentMelody(melody) {
 
 export function setChoosingPlayerId(id) {
     choosingPlayerId = id !== null ? Number(id) : null
-    console.log(`Setting choosing player ID: ${choosingPlayerId} (${typeof choosingPlayerId})`)
     saveState()
 }
 
@@ -379,7 +327,6 @@ export function setCurrentAudioPlayer(player) {
 
 export function setCurrentPlayerId(id) {
     currentPlayerId = id !== null ? Number(id) : null
-    console.log(`Setting current player ID: ${currentPlayerId} (${typeof currentPlayerId})`)
     saveState()
 }
 

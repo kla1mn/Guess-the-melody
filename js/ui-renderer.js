@@ -9,7 +9,6 @@ import {
     addPlayerToAnswered,
     getSortedPlayersByScore,
     gameStarted,
-    logPlayerMappings,
     choosingPlayerId,
     getNicknameById,
     gameCategories,
@@ -22,7 +21,6 @@ import { transferHost } from "./websocket-manager.js"
 export function renderPlayersList(players) {
     playersListEl.innerHTML = ""
 
-    logPlayerMappings()
 
     players.forEach((p) => {
         const li = document.createElement("li")
