@@ -405,6 +405,34 @@ export function showAnswersContainer() {
     }
 }
 
+// Функция для проверки и скрытия пустого контейнера
+export function checkAndHideEmptyContainer() {
+    const answersContainer = document.getElementById("answers-container")
+    if (!answersContainer) return
+
+    // Считаем только видимые ответы (не системные сообщения)
+    const visibleAnswers = answersContainer.querySelectorAll(".player-answer")
+    const systemMessages = answersContainer.querySelectorAll(".system-message")
+
+    // Если нет видимых ответов игроков, скрываем контейнер
+    if (visibleAnswers.length === 0) {
+        console.log("No visible player answers, hiding container")
+        answersContainer.style.opacity = "0"
+        answersContainer.style.transition = "opacity 0.3s"
+
+        setTimeout(() => {
+            // Повторная проверка перед скрытием
+            const finalCheck = answersContainer.querySelectorAll(".player-answer")
+            if (finalCheck.length === 0) {
+                answersContainer.classList.add("hidden")
+                answersContainer.style.opacity = "1"
+            } else {
+                answersContainer.style.opacity = "1"
+            }
+        }, 300)
+    }
+}
+
 export function addPlayerAnswer(nickname, answer, correctAnswer) {
     console.log("Adding player answer to UI:", nickname, answer, correctAnswer)
 
@@ -568,6 +596,8 @@ export function addPlayerAnswer(nickname, answer, correctAnswer) {
                 setTimeout(() => {
                     if (answerElement && answerElement.parentNode) {
                         answerElement.remove()
+                        // Проверяем, не стал ли контейнер пустым после удаления
+                        checkAndHideEmptyContainer()
                     }
                 }, 500)
             }
