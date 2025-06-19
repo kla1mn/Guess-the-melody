@@ -126,7 +126,7 @@ function handleCopyCode() {
         .catch((err) => {
             console.error("Failed to copy room code:", err)
 
-            // Fallback для старых браузеров
+            // для старых браузеров
             const textArea = document.createElement("textarea")
             textArea.value = currentCode
             document.body.appendChild(textArea)

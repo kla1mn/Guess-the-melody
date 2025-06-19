@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/answers.css">
     <link rel="stylesheet" href="css/leaderboard.css">
 </head>
+
 <body>
 <!-- Начальный экран -->
 <div class="container" id="init-screen">
@@ -38,6 +39,7 @@
     </div>
     <p>Ожидаем других игроков...</p>
     <ul id="players-list"></ul>
+
     <!-- Поле для загрузки ссылки -->
     <input type="text" id="link-input" placeholder="Ссылка на плейлист Яндекс.Музыки">
     <button id="add-link-btn">Добавить плейлист</button>
@@ -80,9 +82,7 @@
                 <th>Очки</th>
             </tr>
             </thead>
-            <tbody id="leaderboard-tbody">
-            <!-- Данные таблицы будут добавлены динамически -->
-            </tbody>
+            <tbody id="leaderboard-tbody"></tbody>
         </table>
         <button id="close-leaderboard-btn">Закрыть</button>
     </div>
@@ -107,9 +107,7 @@
                 <th>Очки</th>
             </tr>
             </thead>
-            <tbody id="final-results-tbody">
-            <!-- Данные таблицы будут добавлены динамически -->
-            </tbody>
+            <tbody id="final-results-tbody"></tbody>
         </table>
         <button id="exit-game-btn">Выйти из игры</button>
     </div>

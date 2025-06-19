@@ -13,7 +13,6 @@ import {
 } from "./dom-elements.js"
 import {
     currentCode,
-    currentNick,
     isHost,
     saveState,
     setLinkAdded,
@@ -24,8 +23,6 @@ import { connectWebSocket } from "./websocket-manager.js"
 import { renderCategories } from "./ui-renderer.js"
 
 export function showWaiting() {
-    console.log("Showing waiting screen with code:", currentCode, "nick:", currentNick, "isHost:", isHost)
-
     initScreen.classList.add("hidden")
     joinScreen.classList.add("hidden")
     roomCodeEl.textContent = currentCode
@@ -44,7 +41,6 @@ export function showWaiting() {
 }
 
 export function showGame(categories) {
-    console.log("Showing game screen with categories:", categories)
     setGameStarted(true)
     setGameCategories(categories)
 
@@ -112,7 +108,8 @@ export async function createRoom(nickname) {
         const res = await fetch(`${BACKEND}/game_app/create_game/${encodeURIComponent(nickname)}/`, {
             credentials: "include",
         })
-        if (!res.ok) throw new Error(`Ошибка сети: ${res.status}`)
+        if (!res.ok)
+            alert(`Ошибка сети: ${res.status}`)
 
         return await res.text()
     } catch (e) {
