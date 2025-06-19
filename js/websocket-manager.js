@@ -13,7 +13,13 @@ import {
     setGameStarted,
     setAllPlayersScores,
 } from "./game-state.js"
-import { renderPlayersList, playMelody, updateScoreDisplay, clearAnswersContainer } from "./ui-renderer.js"
+import {
+    renderPlayersList,
+    playMelody,
+    updateScoreDisplay,
+    clearAnswersContainer,
+    hideAnswersContainerWithDelay,
+} from "./ui-renderer.js"
 import { showGame } from "./ui-manager.js"
 
 let socket = null
@@ -407,6 +413,9 @@ function handleEvent(type, payload) {
                     }
                 })
 
+                // Скрываем контейнер с ответами через 3 секунды
+                hideAnswersContainerWithDelay(3000)
+
                 updateChoosingPlayer(payload)
 
                 if (currentAudioPlayer) {
@@ -417,7 +426,11 @@ function handleEvent(type, payload) {
             case "accept_answer":
                 console.log(`Event: ${type}`)
 
+                // Сначала обновляем счет игрока
                 processAnswer(payload.choosing_player, payload.new_points, "Ответ принят")
+
+                // Скрываем контейнер с ответами через 3 секунды
+                hideAnswersContainerWithDelay(3000)
 
                 if (window.gameOverTimer) {
                     clearTimeout(window.gameOverTimer)
@@ -428,13 +441,16 @@ function handleEvent(type, payload) {
                     currentAudioPlayer.pause()
                 }
 
+                // Затем проверяем, закончилась ли игра, и только потом обновляем выбирающего игрока
                 import("./game-state.js").then((gameState) => {
                     if (gameState.checkAllMelodiesGuessed && gameState.checkAllMelodiesGuessed()) {
                         console.log("All melodies guessed after accept_answer, showing game over screen")
+                        // Небольшая задержка, чтобы UI успел обновиться
                         setTimeout(() => {
                             gameState.showGameOverAfterDelay()
                         }, 100)
                     } else {
+                        // Если игра не закончилась, обновляем выбирающего игрока
                         updateChoosingPlayer(payload, false)
                     }
                 })
@@ -448,6 +464,9 @@ function handleEvent(type, payload) {
                             processAnswer(lastAnsweringPlayer, payload.new_points, "Ответ отклонен")
                         }
                     })
+
+                    // Скрываем контейнер с ответами через 3 секунды
+                    hideAnswersContainerWithDelay(3000)
 
                     updateChoosingPlayer(payload)
 

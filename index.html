@@ -32,7 +32,10 @@
 
 <!-- Экран ожидания -->
 <div class="container hidden" id="waiting-screen">
-    <h2>Комната: <span id="room-code"></span></h2>
+    <div class="room-code-container">
+        <h2>Комната: <span id="room-code"></span></h2>
+        <button id="copy-code-btn" class="copy-code-btn" title="Скопировать код">📋</button>
+    </div>
     <p>Ожидаем других игроков...</p>
     <ul id="players-list"></ul>
     <!-- Поле для загрузки ссылки -->

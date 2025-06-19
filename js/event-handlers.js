@@ -34,7 +34,6 @@ async function handleCreateRoom() {
     }
 }
 
-
 function handleJoinMenu() {
     joinNickInput.value = initNickInput.value.trim()
     initScreen.classList.add("hidden")
@@ -87,14 +86,65 @@ async function handleAnswerSubmission(event) {
 
     const { socket, currentNick } = await getGameState()
     if (socket) {
-        socket.send(JSON.stringify({
-            type: "answer",
-            payload: {
-                nickname: currentNick,
-                answer: answer,
-            },
-        }))
+        socket.send(
+            JSON.stringify({
+                type: "answer",
+                payload: {
+                    nickname: currentNick,
+                    answer: answer,
+                },
+            }),
+        )
         answerInput.value = ""
+    }
+}
+
+async function handleCopyCode() {
+    const { currentCode } = await getGameState()
+    const copyBtn = document.getElementById("copy-code-btn")
+
+    if (!currentCode) {
+        console.error("No room code to copy")
+        return
+    }
+
+    try {
+        await navigator.clipboard.writeText(currentCode)
+
+        // Визуальная обратная связь
+        copyBtn.classList.add("copied")
+        copyBtn.textContent = "✓"
+
+        setTimeout(() => {
+            copyBtn.classList.remove("copied")
+            copyBtn.textContent = "📋"
+        }, 1000)
+
+        console.log("Room code copied to clipboard:", currentCode)
+    } catch (err) {
+        console.error("Failed to copy room code:", err)
+
+        // Fallback для старых браузеров
+        const textArea = document.createElement("textarea")
+        textArea.value = currentCode
+        document.body.appendChild(textArea)
+        textArea.select()
+
+        try {
+            document.execCommand("copy")
+            copyBtn.classList.add("copied")
+            copyBtn.textContent = "✓"
+
+            setTimeout(() => {
+                copyBtn.classList.remove("copied")
+                copyBtn.textContent = "📋"
+            }, 1000)
+        } catch (fallbackErr) {
+            console.error("Fallback copy failed:", fallbackErr)
+            alert("Не удалось скопировать код. Попробуйте выделить и скопировать вручную.")
+        }
+
+        document.body.removeChild(textArea)
     }
 }
 
@@ -111,4 +161,7 @@ export function setupEventHandlers() {
     addLinkBtn?.addEventListener("click", handleAddPlaylist)
     startBtn?.addEventListener("click", handleStartGame)
     answerForm?.addEventListener("submit", handleAnswerSubmission)
+
+    const copyCodeBtn = document.getElementById("copy-code-btn")
+    copyCodeBtn?.addEventListener("click", handleCopyCode)
 }

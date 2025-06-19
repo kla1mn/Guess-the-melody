@@ -328,6 +328,22 @@ export function clearAnswersContainer() {
     }
 }
 
+export function hideAnswersContainerWithDelay(delay = 3000) {
+    console.log(`Hiding answers container in ${delay}ms`)
+    setTimeout(() => {
+        const answersContainer = document.getElementById("answers-container")
+        if (answersContainer && !answersContainer.classList.contains("hidden")) {
+            answersContainer.style.opacity = "0"
+            answersContainer.style.transition = "opacity 0.5s"
+
+            setTimeout(() => {
+                answersContainer.classList.add("hidden")
+                answersContainer.style.opacity = "1"
+            }, 500)
+        }
+    }, delay)
+}
+
 export function showAnswersContainer() {
     const answersContainer = document.getElementById("answers-container")
     if (answersContainer) {
@@ -631,6 +647,7 @@ export function showGameOverScreen() {
         const winnerScoreEl = document.getElementById("winner-score")
 
         if (winnerNameEl && winnerScoreEl) {
+            // Handle null/undefined winner nickname
             const winnerName = winner.nickname || "Unknown Player"
             winnerNameEl.textContent = winnerName
             winnerScoreEl.textContent = `${winner.score || 0} очков`
