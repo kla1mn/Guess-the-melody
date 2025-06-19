@@ -11,7 +11,7 @@ import {
 } from "./game-state.js"
 import { playersListEl, categoriesCt } from "./dom-elements.js"
 
-function renderPlayersList(players) {
+export function renderPlayersList(players) {
     playersListEl.innerHTML = ""
 
     import("./game-state.js").then(({ isHost, currentNick, gameStarted, logPlayerMappings }) => {
@@ -58,7 +58,7 @@ function renderPlayersList(players) {
     })
 }
 
-function addPlayerToList(nickname, isMaster = false, playerId = null) {
+export function addPlayerToList(nickname, isMaster = false, playerId = null) {
     const li = document.createElement("li")
     li.className = "player-list-item"
 
@@ -99,7 +99,7 @@ function addPlayerToList(nickname, isMaster = false, playerId = null) {
     playersListEl.appendChild(li)
 }
 
-function removePlayerFromList(nickname) {
+export function removePlayerFromList(nickname) {
     Array.from(playersListEl.children).forEach((li) => {
         if (li.textContent.startsWith(nickname)) {
             playersListEl.removeChild(li)
@@ -107,7 +107,7 @@ function removePlayerFromList(nickname) {
     })
 }
 
-function renderCategories(categories) {
+export function renderCategories(categories) {
     console.log("Rendering categories:", categories)
     categoriesCt.innerHTML = ""
 
@@ -245,7 +245,7 @@ function renderCategoryCards(categories) {
 
 let onTimeUpdate
 
-function playMelody(link, startTime = 0, maxDuration = 30) {
+export function playMelody(link, startTime = 0, maxDuration = 30) {
     if (!link) {
         console.error("No link provided for melody playback")
         return
@@ -296,7 +296,7 @@ function playMelody(link, startTime = 0, maxDuration = 30) {
     })
 }
 
-function showAnswerInterface() {
+export function showAnswerInterface() {
     if (isChoosingPlayer() || hasPlayerAnswered() || isHost) {
         return
     }
@@ -307,14 +307,14 @@ function showAnswerInterface() {
     }
 }
 
-function hideAnswerInterface() {
+export function hideAnswerInterface() {
     const answerForm = document.getElementById("answer-form")
     if (answerForm) {
         answerForm.classList.add("hidden")
     }
 }
 
-function clearAnswersContainer() {
+export function clearAnswersContainer() {
     const answersContainer = document.getElementById("answers-container")
     if (answersContainer) {
         answersContainer.style.opacity = "0"
@@ -328,7 +328,7 @@ function clearAnswersContainer() {
     }
 }
 
-function showAnswersContainer() {
+export function showAnswersContainer() {
     const answersContainer = document.getElementById("answers-container")
     if (answersContainer) {
         if (answersContainer.children.length > 0) {
@@ -340,7 +340,7 @@ function showAnswersContainer() {
     }
 }
 
-function addPlayerAnswer(nickname, answer, correctAnswer) {
+export function addPlayerAnswer(nickname, answer, correctAnswer) {
     console.log("Adding player answer to UI:", nickname, answer, correctAnswer)
 
     const answersContainer = document.getElementById("answers-container")
@@ -491,7 +491,7 @@ function addPlayerAnswer(nickname, answer, correctAnswer) {
     answersContainer.scrollTop = answersContainer.scrollHeight
 }
 
-function updateScoreDisplay(nickname, points) {
+export function updateScoreDisplay(nickname, points) {
     console.log("Updating score display for", nickname, "with points", points)
 
     const playerItems = Array.from(playersListEl.children)
@@ -509,7 +509,7 @@ function updateScoreDisplay(nickname, points) {
     updateLeaderboardTable()
 }
 
-function updateLeaderboardTable() {
+export function updateLeaderboardTable() {
     console.log("Updating leaderboard table")
     const sortedPlayers = getSortedPlayersByScore()
     const tbody = document.getElementById("leaderboard-tbody")
@@ -556,7 +556,7 @@ function updateLeaderboardTable() {
     console.log(`Leaderboard updated with ${sortedPlayers.length} players`)
 }
 
-function showLeaderboard() {
+export function showLeaderboard() {
     console.log("Showing leaderboard")
     const leaderboardModal = document.getElementById("leaderboard-modal")
 
@@ -583,19 +583,7 @@ function showLeaderboard() {
     }
 }
 
-function hideLeaderboard() {
-    console.log("Hiding leaderboard")
-    const leaderboardModal = document.getElementById("leaderboard-modal")
-
-    if (leaderboardModal) {
-        leaderboardModal.classList.add("hidden")
-        leaderboardModal.style.display = "none"
-    } else {
-        console.error("Leaderboard modal not found when trying to hide")
-    }
-}
-
-function updateCategoryButtons() {
+export function updateCategoryButtons() {
     import("./game-state.js").then(({ gameCategories }) => {
         if (!gameCategories) return
 
@@ -620,7 +608,7 @@ function updateCategoryButtons() {
     })
 }
 
-function showGameOverScreen() {
+export function showGameOverScreen() {
     console.log("Showing game over screen")
 
     const gameOverModal = document.getElementById("game-over-modal")
@@ -643,10 +631,11 @@ function showGameOverScreen() {
         const winnerScoreEl = document.getElementById("winner-score")
 
         if (winnerNameEl && winnerScoreEl) {
-            winnerNameEl.textContent = winner.nickname
-            winnerScoreEl.textContent = `${winner.score} очков`
+            const winnerName = winner.nickname || "Unknown Player"
+            winnerNameEl.textContent = winnerName
+            winnerScoreEl.textContent = `${winner.score || 0} очков`
 
-            if (winner.nickname === currentNick) {
+            if (winnerName === currentNick) {
                 winnerNameEl.style.textShadow = "0 0 10px rgba(255, 215, 0, 0.8)"
                 document.getElementById("winner-container").style.animation = "winner-glow 1s infinite alternate"
             }
@@ -671,7 +660,7 @@ function showGameOverScreen() {
                 rankCell.textContent = (index + 1).toString()
 
                 const nameCell = document.createElement("td")
-                nameCell.textContent = player.nickname
+                nameCell.textContent = player.nickname || "Unknown Player"
 
                 const scoreCell = document.createElement("td")
                 scoreCell.textContent = player.score.toString()
@@ -745,32 +734,6 @@ function addConfettiEffect() {
 }
 
 function getRandomColor() {
-    const colors = [
-        "#ff5c00",
-        "#ffd700",
-        "#4a90e2",
-        "#50c878",
-        "#e94e77",
-        "#9370db",
-    ]
+    const colors = ["#ff5c00", "#ffd700", "#4a90e2", "#50c878", "#e94e77", "#9370db"]
     return colors[Math.floor(Math.random() * colors.length)]
-}
-
-export {
-    renderPlayersList,
-    addPlayerToList,
-    removePlayerFromList,
-    renderCategories,
-    playMelody,
-    showAnswerInterface,
-    hideAnswerInterface,
-    showAnswersContainer,
-    addPlayerAnswer,
-    updateScoreDisplay,
-    clearAnswersContainer,
-    showLeaderboard,
-    hideLeaderboard,
-    updateLeaderboardTable,
-    updateCategoryButtons,
-    showGameOverScreen,
 }

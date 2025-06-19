@@ -1,119 +1,114 @@
 import {
     addLinkBtn,
+    answerForm,
+    answerInput,
+    backBtn,
+    createBtn,
+    enterBtn,
     initNickInput,
     initScreen,
     joinInviteInput,
+    joinMenuBtn,
     joinNickInput,
     joinScreen,
+    leaveBtn,
     linkInput,
+    logoutBtn,
     startBtn,
 } from "./dom-elements.js"
-import {addPlaylistLink, createRoom, joinRoom, showWaiting, startGame} from "./ui-manager.js"
-import {setCurrentCode, setCurrentNick, setIsHost} from "./game-state.js"
+import { addPlaylistLink, createRoom, joinRoom, showWaiting, startGame } from "./ui-manager.js"
+import { setCurrentCode, setCurrentNick, setIsHost } from "./game-state.js"
 
-function setupEventHandlers() {
-    console.log("Setting up event handlers...")
+const getGameState = () => import("./game-state.js")
 
-    // Кнопка создания комнаты
-    document.getElementById("create-btn").addEventListener("click", async () => {
-        const nickname = initNickInput.value.trim()
-        const inviteCode = await createRoom(nickname)
+async function handleCreateRoom() {
+    const nickname = initNickInput.value.trim()
+    if (!nickname) return
 
-        if (inviteCode) {
-            setCurrentNick(nickname)
-            setCurrentCode(inviteCode)
-            setIsHost(true)
-            showWaiting()
-        }
-    })
-
-    // Кнопка открытия экрана входа по коду
-    document.getElementById("join-menu-btn").addEventListener("click", () => {
-        joinNickInput.value = initNickInput.value.trim()
-
-        initScreen.classList.add("hidden")
-        joinScreen.classList.remove("hidden")
-    })
-
-    // Кнопка входа в комнату
-    document.getElementById("enter-btn").addEventListener("click", async () => {
-        const nickname = joinNickInput.value.trim()
-        const inviteCode = joinInviteInput.value.trim()
-
-        const success = await joinRoom(nickname, inviteCode)
-
-        if (success) {
-            setCurrentNick(nickname)
-            setCurrentCode(inviteCode)
-            setIsHost(false)
-            showWaiting()
-        }
-    })
-
-    // Кнопка "Назад" на экране входа
-    document.getElementById("back-btn").addEventListener("click", () => {
-        joinScreen.classList.add("hidden")
-        initScreen.classList.remove("hidden")
-    })
-
-    // Кнопка добавления плейлиста
-    addLinkBtn.addEventListener("click", () => {
-        const link = linkInput.value.trim()
-        addPlaylistLink(link)
-    })
-
-    // Кнопка старта игры (только для хоста)
-    startBtn.addEventListener("click", () => {
-        import("./game-state.js").then(({ socket }) => {
-            startGame(socket)
-        })
-    })
-
-    // Кнопка выхода из комнаты
-    document.getElementById("leave-btn").addEventListener("click", () => {
-        import("./game-state.js").then(({ clearState }) => {
-            clearState()
-            window.location.reload()
-        })
-    })
-
-    // Кнопка выхода из игры (после окончания)
-    const logoutBtn = document.getElementById("logout-btn")
-    if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => {
-            import("./game-state.js").then(({ clearState }) => {
-                clearState()
-                window.location.reload()
-            })
-        })
-    }
-
-    // Обработка отправки формы с ответом
-    const answerForm = document.getElementById("answer-form")
-    if (answerForm) {
-        answerForm.addEventListener("submit", (event) => {
-            event.preventDefault()
-            const answerInput = document.getElementById("answer-input")
-            const answer = answerInput.value.trim()
-
-            if (answer) {
-                import("./game-state.js").then(({ socket, currentNick }) => {
-                    if (socket) {
-                        socket.send(
-                            JSON.stringify({
-                                type: "answer",
-                                payload: {
-                                    nickname: currentNick,
-                                    answer: answer,
-                                },
-                            }),
-                        )
-                        answerInput.value = ""
-                    }
-                })
-            }
-        })
+    const inviteCode = await createRoom(nickname)
+    if (inviteCode) {
+        setCurrentNick(nickname)
+        setCurrentCode(inviteCode)
+        setIsHost(true)
+        showWaiting()
     }
 }
 
-export { setupEventHandlers }
+
+function handleJoinMenu() {
+    joinNickInput.value = initNickInput.value.trim()
+    initScreen.classList.add("hidden")
+    joinScreen.classList.remove("hidden")
+}
+
+async function handleJoinRoom() {
+    const nickname = joinNickInput.value.trim()
+    const inviteCode = joinInviteInput.value.trim()
+
+    if (!nickname || !inviteCode) return
+
+    const success = await joinRoom(nickname, inviteCode)
+    if (success) {
+        setCurrentNick(nickname)
+        setCurrentCode(inviteCode)
+        setIsHost(false)
+        showWaiting()
+    }
+}
+
+function handleBackNavigation() {
+    joinScreen.classList.add("hidden")
+    initScreen.classList.remove("hidden")
+}
+
+function handleAddPlaylist() {
+    const link = linkInput.value.trim()
+    if (link) {
+        addPlaylistLink(link)
+    }
+}
+
+async function handleStartGame() {
+    const { socket } = await getGameState()
+    startGame(socket)
+}
+
+async function handleLeaveRoom() {
+    const { clearState } = await getGameState()
+    clearState()
+    window.location.reload()
+}
+
+async function handleAnswerSubmission(event) {
+    event.preventDefault()
+
+    const answer = answerInput?.value.trim()
+    if (!answer) return
+
+    const { socket, currentNick } = await getGameState()
+    if (socket) {
+        socket.send(JSON.stringify({
+            type: "answer",
+            payload: {
+                nickname: currentNick,
+                answer: answer,
+            },
+        }))
+        answerInput.value = ""
+    }
+}
+
+export function setupEventHandlers() {
+    console.log("Setting up event handlers...")
+
+    createBtn?.addEventListener("click", handleCreateRoom)
+    joinMenuBtn?.addEventListener("click", handleJoinMenu)
+    enterBtn?.addEventListener("click", handleJoinRoom)
+    backBtn?.addEventListener("click", handleBackNavigation)
+    leaveBtn?.addEventListener("click", handleLeaveRoom)
+    logoutBtn?.addEventListener("click", handleLeaveRoom)
+
+    addLinkBtn?.addEventListener("click", handleAddPlaylist)
+    startBtn?.addEventListener("click", handleStartGame)
+    answerForm?.addEventListener("submit", handleAnswerSubmission)
+}

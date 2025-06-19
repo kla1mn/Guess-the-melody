@@ -18,7 +18,7 @@ import { showGame } from "./ui-manager.js"
 
 let socket = null
 
-function connectWebSocket() {
+export function connectWebSocket() {
     if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
         console.log("WS: уже подключён или в процессе подключения")
         return socket
@@ -56,6 +56,117 @@ function connectWebSocket() {
 
     setSocket(socket)
     return socket
+}
+
+function updateGameInfo(isCurrentPlayer, choosingPlayerName) {
+    const infoEl = document.getElementById("game-info")
+    if (infoEl) {
+        if (isCurrentPlayer) {
+            infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
+        } else {
+            infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
+        }
+    }
+}
+
+function updateGameInfoWithDelay(delay = 300) {
+    setTimeout(() => {
+        import("./game-state.js").then(({ isChoosingPlayer, getNicknameById, choosingPlayerId }) => {
+            const choosingPlayerName = getNicknameById(choosingPlayerId)
+            updateGameInfo(isChoosingPlayer(), choosingPlayerName)
+        })
+    }, delay)
+}
+
+function renderCategoriesWithDelay(delay = 500) {
+    setTimeout(() => {
+        import("./ui-renderer.js").then(({ renderCategories }) => {
+            import("./game-state.js").then(({ gameCategories }) => {
+                renderCategories(gameCategories)
+            })
+        })
+    }, delay)
+}
+
+function showSystemMessage(text, duration = 3000) {
+    const existingMessages = document.querySelectorAll(".system-message")
+    const isDuplicate = Array.from(existingMessages).some((msg) => msg.textContent.includes(text))
+
+    if (!isDuplicate) {
+        const message = document.createElement("div")
+        message.className = "system-message"
+        message.textContent = text
+
+        const answersContainer = document.getElementById("answers-container")
+        if (answersContainer) {
+            answersContainer.appendChild(message)
+
+            setTimeout(() => {
+                message.style.opacity = "0"
+                message.style.transition = "opacity 0.5s"
+                setTimeout(() => message.remove(), 500)
+            }, duration)
+        }
+    }
+}
+
+function processAnswer(playerNickname, points, messagePrefix) {
+    setPlayerScore(playerNickname, points)
+    updateScoreDisplay(playerNickname, points)
+
+    import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
+        updateLeaderboardTable()
+    })
+
+    showSystemMessage(`${messagePrefix} игрока ${playerNickname}! Теперь у него ${points} очков`)
+}
+
+function updateChoosingPlayer(payload, shouldCheckGameOver = false) {
+    import("./game-state.js").then((gameState) => {
+        const { setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId } = gameState
+        const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
+        const choosingPlayerChanged = Number(currentChoosingPlayerId) !== Number(newChoosingPlayerId)
+
+        setChoosingPlayerId(newChoosingPlayerId)
+
+        if (shouldCheckGameOver && gameState.checkAllMelodiesGuessed && gameState.checkAllMelodiesGuessed()) {
+            console.log("All melodies guessed, showing game over screen")
+            gameState.showGameOverAfterDelay()
+            return
+        }
+
+        updateGameInfoWithDelay()
+
+        if (choosingPlayerChanged) {
+            console.log("Choosing player changed, updating UI")
+            renderCategoriesWithDelay()
+        }
+
+        showSystemMessage(`${payload.choosing_player} выбирает следующую мелодию`)
+    })
+}
+
+function initializeMelodies(categories) {
+    if (categories) {
+        categories.forEach((category) => {
+            if (category.melodies) {
+                category.melodies.forEach((melody) => {
+                    if (melody.is_guessed === undefined) {
+                        melody.is_guessed = false
+                    }
+                })
+            }
+        })
+    }
+}
+
+function initializeGameComponents() {
+    resetAnsweredPlayers()
+    clearAnswersContainer()
+
+    import("./ui-renderer.js").then(({ initializeLeaderboard }) => {
+        initializeLeaderboard()
+    })
 }
 
 function handleEvent(type, payload) {
@@ -159,84 +270,33 @@ function handleEvent(type, payload) {
                 console.log(`Event: ${type}`)
                 document.getElementById("logout-btn").classList.remove("hidden")
 
-                if (payload.state_info && payload.state_info.choosing_player_id) {
-                    const choosingPlayerId = payload.state_info.choosing_player_id
+                initializeMelodies(payload.categories)
+                showGame(payload.categories)
+                initializeGameComponents()
 
+                if (payload.state_info && payload.state_info.choosing_player_id) {
                     import("./game-state.js").then(
                         ({ setChoosingPlayerId, setCurrentAnswer, getNicknameById, currentPlayerId }) => {
-                            setChoosingPlayerId(choosingPlayerId)
-
-                            console.log("Setting choosing player ID:", choosingPlayerId, "Current player ID:", currentPlayerId)
+                            setChoosingPlayerId(payload.state_info.choosing_player_id)
+                            console.log(
+                                "Setting choosing player ID:",
+                                payload.state_info.choosing_player_id,
+                                "Current player ID:",
+                                currentPlayerId,
+                            )
 
                             if (payload.state_info.answer) {
                                 setCurrentAnswer(payload.state_info.answer)
                             }
 
-                            if (payload.categories) {
-                                payload.categories.forEach((category) => {
-                                    if (category.melodies) {
-                                        category.melodies.forEach((melody) => {
-                                            if (melody.is_guessed === undefined) {
-                                                melody.is_guessed = false
-                                            }
-                                        })
-                                    }
-                                })
-                            }
-
-                            showGame(payload.categories)
-                            resetAnsweredPlayers()
-
-                            import("./ui-renderer.js").then(({ clearAnswersContainer }) => {
-                                clearAnswersContainer()
-                            })
-
-                            import("./ui-renderer.js").then(({ initializeLeaderboard }) => {
-                                initializeLeaderboard()
-                            })
-
                             setTimeout(() => {
-                                const infoEl = document.getElementById("game-info")
-                                if (infoEl) {
-                                    const choosingPlayerNickname = getNicknameById(choosingPlayerId)
-                                    if (Number(currentPlayerId) === Number(choosingPlayerId)) {
-                                        infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
-                                    } else {
-                                        infoEl.innerHTML = `<p>${choosingPlayerNickname} выбирает мелодию...</p>`
-                                    }
-                                }
-
-                                import("./ui-renderer.js").then(({ renderCategories }) => {
-                                    import("./game-state.js").then(({ gameCategories }) => {
-                                        renderCategories(gameCategories)
-                                    })
-                                })
+                                const choosingPlayerNickname = getNicknameById(payload.state_info.choosing_player_id)
+                                const isCurrentPlayer = Number(currentPlayerId) === Number(payload.state_info.choosing_player_id)
+                                updateGameInfo(isCurrentPlayer, choosingPlayerNickname)
+                                renderCategoriesWithDelay(200)
                             }, 200)
                         },
                     )
-                } else {
-                    if (payload.categories) {
-                        payload.categories.forEach((category) => {
-                            if (category.melodies) {
-                                category.melodies.forEach((melody) => {
-                                    if (melody.is_guessed === undefined) {
-                                        melody.is_guessed = false
-                                    }
-                                })
-                            }
-                        })
-                    }
-
-                    showGame(payload.categories)
-                    resetAnsweredPlayers()
-
-                    import("./ui-renderer.js").then(({ clearAnswersContainer }) => {
-                        clearAnswersContainer()
-                    })
-
-                    import("./ui-renderer.js").then(({ initializeLeaderboard }) => {
-                        initializeLeaderboard()
-                    })
                 }
                 break
 
@@ -258,7 +318,7 @@ function handleEvent(type, payload) {
 
                 if (payload.link) {
                     console.log("Playing melody from pick_melody event:", payload.link)
-                    import("./game-state.js").then(({ setCurrentAnswer, setCurrentMelody }) => {
+                    import("./game-state.js").then(({ setCurrentAnswer, setCurrentMelody, isHost }) => {
                         if (payload.melody) {
                             setCurrentAnswer(payload.melody)
                         }
@@ -268,9 +328,7 @@ function handleEvent(type, payload) {
                             points: payload.points || 0,
                             category: payload.category || "",
                         })
-                    })
 
-                    import("./game-state.js").then(({ isHost }) => {
                         if (isHost) {
                             playMelody(payload.link)
                         } else {
@@ -345,203 +403,41 @@ function handleEvent(type, payload) {
                 console.log(`Event: ${type}`)
                 import("./game-state.js").then(({ lastAnsweringPlayer }) => {
                     if (lastAnsweringPlayer) {
-                        setPlayerScore(lastAnsweringPlayer, payload.new_points)
-                        updateScoreDisplay(lastAnsweringPlayer, payload.new_points)
-
-                        import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                            updateLeaderboardTable()
-                        })
-
-                        const existingMessages = document.querySelectorAll(".system-message")
-                        let isDuplicate = false
-                        existingMessages.forEach((msg) => {
-                            if (msg.textContent.includes(`Ответ игрока ${lastAnsweringPlayer} частично принят!`)) {
-                                isDuplicate = true
-                            }
-                        })
-
-                        if (!isDuplicate) {
-                            const message = document.createElement("div")
-                            message.className = "system-message"
-                            message.textContent = `Ответ игрока ${lastAnsweringPlayer} частично принят! Теперь у него ${payload.new_points} очков`
-
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(message)
-
-                                setTimeout(() => {
-                                    message.style.opacity = "0"
-                                    message.style.transition = "opacity 0.5s"
-                                    setTimeout(() => message.remove(), 500)
-                                }, 3000)
-                            }
-                        }
+                        processAnswer(lastAnsweringPlayer, payload.new_points, "Ответ частично принят")
                     }
                 })
-                import("./game-state.js").then(
-                    ({ setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId }) => {
-                        const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
 
-                        const choosingPlayerChanged = Number(currentChoosingPlayerId) !== Number(newChoosingPlayerId)
-
-                        setChoosingPlayerId(newChoosingPlayerId)
-
-                        if (choosingPlayerChanged) {
-                            console.log("Choosing player changed, updating UI")
-                            setTimeout(() => {
-                                const infoEl = document.getElementById("game-info")
-                                if (infoEl) {
-                                    import("./game-state.js").then(({ isChoosingPlayer, getNicknameById, choosingPlayerId }) => {
-                                        if (isChoosingPlayer()) {
-                                            infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
-                                        } else {
-                                            const choosingPlayerName = getNicknameById(choosingPlayerId)
-                                            infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
-                                        }
-                                    })
-                                }
-                            }, 300)
-
-                            setTimeout(() => {
-                                import("./ui-renderer.js").then(({ renderCategories }) => {
-                                    import("./game-state.js").then(({ gameCategories }) => {
-                                        renderCategories(gameCategories)
-                                    })
-                                })
-                            }, 500)
-                        }
-
-                        const nextMessage = document.createElement("div")
-                        nextMessage.className = "system-message"
-                        nextMessage.textContent = `${payload.choosing_player} выбирает следующую мелодию`
-
-                        const answersContainer = document.getElementById("answers-container")
-                        if (answersContainer) {
-                            answersContainer.appendChild(nextMessage)
-
-                            setTimeout(() => {
-                                nextMessage.style.opacity = "0"
-                                nextMessage.style.transition = "opacity 0.5s"
-                                setTimeout(() => nextMessage.remove(), 500)
-                            }, 3000)
-                        }
-                    },
-                )
+                updateChoosingPlayer(payload)
 
                 if (currentAudioPlayer) {
                     currentAudioPlayer.play().catch((err) => console.log("Could not resume playback:", err))
                 }
-
                 break
 
             case "accept_answer":
                 console.log(`Event: ${type}`)
-                const lastPlayerNickname = payload.choosing_player
 
-                setPlayerScore(lastPlayerNickname, payload.new_points)
-                updateScoreDisplay(lastPlayerNickname, payload.new_points)
-
-                import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                    updateLeaderboardTable()
-                })
-
-                const existingMessages = document.querySelectorAll(".system-message")
-                let isDuplicate = false
-                existingMessages.forEach((msg) => {
-                    if (msg.textContent.includes(`Ответ игрока ${lastPlayerNickname} принят!`)) {
-                        isDuplicate = true
-                    }
-                })
-
-                if (!isDuplicate) {
-                    const message = document.createElement("div")
-                    message.className = "system-message"
-                    message.textContent = `Ответ игрока ${lastPlayerNickname} принят! Теперь у него ${payload.new_points} очков`
-
-                    const answersContainer = document.getElementById("answers-container")
-                    if (answersContainer) {
-                        answersContainer.appendChild(message)
-
-                        setTimeout(() => {
-                            message.style.opacity = "0"
-                            message.style.transition = "opacity 0.5s"
-                            setTimeout(() => message.remove(), 500)
-                        }, 3000)
-                    }
-                }
+                processAnswer(payload.choosing_player, payload.new_points, "Ответ принят")
 
                 if (window.gameOverTimer) {
                     clearTimeout(window.gameOverTimer)
                     window.gameOverTimer = null
                 }
 
-                import("./game-state.js").then(
-                    ({
-                         setChoosingPlayerId,
-                         playerNicknameToId,
-                         choosingPlayerId: currentChoosingPlayerId,
-                         checkAllMelodiesGuessed,
-                         showGameOverAfterDelay,
-                     }) => {
-                        const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
-
-                        const choosingPlayerChanged = Number(currentChoosingPlayerId) !== Number(newChoosingPlayerId)
-
-                        setChoosingPlayerId(newChoosingPlayerId)
-
-                        if (checkAllMelodiesGuessed()) {
-                            console.log("All melodies guessed after accepting answer, showing game over screen")
-                            showGameOverAfterDelay()
-                            return
-                        }
-
-                        console.log("Updating game info panel with choosing player:", payload.choosing_player)
-                        setTimeout(() => {
-                            const infoEl = document.getElementById("game-info")
-                            if (infoEl) {
-                                import("./game-state.js").then(({ isChoosingPlayer, getNicknameById, choosingPlayerId }) => {
-                                    if (isChoosingPlayer()) {
-                                        infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
-                                    } else {
-                                        const choosingPlayerName = getNicknameById(choosingPlayerId)
-                                        infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
-                                    }
-                                })
-                            }
-                        }, 300)
-
-                        if (choosingPlayerChanged) {
-                            console.log("Choosing player changed, updating UI")
-                            setTimeout(() => {
-                                import("./ui-renderer.js").then(({ renderCategories }) => {
-                                    import("./game-state.js").then(({ gameCategories }) => {
-                                        renderCategories(gameCategories)
-                                    })
-                                })
-                            }, 500)
-                        }
-
-                        const nextMessage = document.createElement("div")
-                        nextMessage.className = "system-message"
-                        nextMessage.textContent = `${payload.choosing_player} выбирает следующую мелодию`
-
-                        const answersContainer = document.getElementById("answers-container")
-                        if (answersContainer) {
-                            answersContainer.appendChild(nextMessage)
-
-                            setTimeout(() => {
-                                nextMessage.style.opacity = "0"
-                                nextMessage.style.transition = "opacity 0.5s"
-                                setTimeout(() => nextMessage.remove(), 500)
-                            }, 3000)
-                        }
-                    },
-                )
-
                 if (currentAudioPlayer) {
                     currentAudioPlayer.pause()
                 }
 
+                import("./game-state.js").then((gameState) => {
+                    if (gameState.checkAllMelodiesGuessed && gameState.checkAllMelodiesGuessed()) {
+                        console.log("All melodies guessed after accept_answer, showing game over screen")
+                        setTimeout(() => {
+                            gameState.showGameOverAfterDelay()
+                        }, 100)
+                    } else {
+                        updateChoosingPlayer(payload, false)
+                    }
+                })
                 break
 
             case "reject_answer":
@@ -549,88 +445,12 @@ function handleEvent(type, payload) {
                 try {
                     import("./game-state.js").then(({ lastAnsweringPlayer }) => {
                         if (lastAnsweringPlayer) {
-                            setPlayerScore(lastAnsweringPlayer, payload.new_points)
-                            updateScoreDisplay(lastAnsweringPlayer, payload.new_points)
-
-                            import("./ui-renderer.js").then(({ updateLeaderboardTable }) => {
-                                updateLeaderboardTable()
-                            })
-
-                            const existingMessages = document.querySelectorAll(".system-message")
-                            let isDuplicate = false
-                            existingMessages.forEach((msg) => {
-                                if (msg.textContent.includes(`Ответ игрока ${lastAnsweringPlayer} отклонен!`)) {
-                                    isDuplicate = true
-                                }
-                            })
-
-                            if (!isDuplicate) {
-                                const message = document.createElement("div")
-                                message.className = "system-message"
-                                message.textContent = `Ответ игрока ${lastAnsweringPlayer} отклонен! Теперь у него ${payload.new_points} очков`
-
-                                const answersContainer = document.getElementById("answers-container")
-                                if (answersContainer) {
-                                    answersContainer.appendChild(message)
-
-                                    setTimeout(() => {
-                                        message.style.opacity = "0"
-                                        message.style.transition = "opacity 0.5s"
-                                        setTimeout(() => message.remove(), 500)
-                                    }, 3000)
-                                }
-                            }
+                            processAnswer(lastAnsweringPlayer, payload.new_points, "Ответ отклонен")
                         }
                     })
-                    import("./game-state.js").then(
-                        ({ setChoosingPlayerId, playerNicknameToId, choosingPlayerId: currentChoosingPlayerId }) => {
-                            const newChoosingPlayerId = playerNicknameToId[payload.choosing_player] || payload.choosing_player
 
-                            const choosingPlayerChanged = Number(currentChoosingPlayerId) !== Number(newChoosingPlayerId)
+                    updateChoosingPlayer(payload)
 
-                            setChoosingPlayerId(newChoosingPlayerId)
-
-                            if (choosingPlayerChanged) {
-                                console.log("Choosing player changed, updating UI")
-                                setTimeout(() => {
-                                    const infoEl = document.getElementById("game-info")
-                                    if (infoEl) {
-                                        import("./game-state.js").then(({ isChoosingPlayer, getNicknameById, choosingPlayerId }) => {
-                                            if (isChoosingPlayer()) {
-                                                infoEl.innerHTML = `<p>Ты выбираешь мелодию</p>`
-                                            } else {
-                                                const choosingPlayerName = getNicknameById(choosingPlayerId)
-                                                infoEl.innerHTML = `<p>${choosingPlayerName} выбирает мелодию...</p>`
-                                            }
-                                        })
-                                    }
-                                }, 300)
-
-                                setTimeout(() => {
-                                    import("./ui-renderer.js").then(({ renderCategories }) => {
-                                        import("./game-state.js").then(({ gameCategories }) => {
-                                            renderCategories(gameCategories)
-                                        })
-                                    })
-                                }, 500)
-                            }
-
-                            const nextMessage = document.createElement("div")
-                            nextMessage.className = "system-message"
-                            nextMessage.textContent = `${payload.choosing_player} выбирает следующую мелодию`
-
-                            const answersContainer = document.getElementById("answers-container")
-                            if (answersContainer) {
-                                answersContainer.appendChild(nextMessage)
-
-                                setTimeout(() => {
-                                    nextMessage.style.opacity = "0"
-                                    nextMessage.style.transition = "opacity 0.5s"
-                                    setTimeout(() => nextMessage.remove(), 500)
-                                }, 3000)
-                            }
-                        },
-                    )
                     if (currentAudioPlayer) {
                         currentAudioPlayer.play().catch((err) => console.log("Could not resume playback:", err))
                     }
@@ -641,27 +461,25 @@ function handleEvent(type, payload) {
 
             case "exception":
                 console.log(`Event: ${type}`)
+                const errorMessages = {
+                    "The game has already begun": "Потерпи, игра уже началась",
+                    "Game is not started": "Игра еще не началась",
+                    "Now another player chooses": "Сейчас выбирает другой игрок",
+                    "Some player has already answered": "Другой игрок уже ответил",
+                    "This song has been chosen before": "Эту мелодию уже выбирали раньше",
+                    "User must be a master": "Для этого действия надо быть хостом",
+                    "There must be at least two players in the game": "В игре должен быть один хост и хотя бы один игрок",
+                    "At least one player must load the playlist to start the game":
+                        "Хотя бы один игрок должен загрузить ссылку на плейлист Яндекс.Музыки",
+                }
+
+                const message = errorMessages[payload.message] || `Ошибка: ${payload.message}`
+                alert(message)
+
                 if (payload.message === "The game has already begun") {
-                    alert("Потерпи, игра уже началась")
                     import("./game-state.js").then(({ setGameStarted }) => {
                         setGameStarted(true)
                     })
-                } else if (payload.message === "Game is not started") {
-                    alert("Игра еще не началась")
-                } else if (payload.message === "Now another player chooses") {
-                    alert("Сейчас выбирает другой игрок")
-                } else if (payload.message === "Some player has already answered") {
-                    alert("Другой игрок уже ответил")
-                } else if (payload.message === "This song has been chosen before") {
-                    alert("Эту мелодию уже выбирали раньше")
-                } else if (payload.message === "User must be a master") {
-                    alert("Для этого действия надо быть хостом")
-                } else if (payload.message === "There must be at least two players in the game") {
-                    alert("В игре должен быть один хост и хотя бы один игрок")
-                } else if (payload.message === "At least one player must load the playlist to start the game") {
-                    alert("Хотя бы один игрок должен загрузить ссылку на плейлист Яндекс.Музыки")
-                } else {
-                    alert(`Ошибка: ${payload.message}`)
                 }
                 break
 
@@ -676,7 +494,7 @@ function handleEvent(type, payload) {
     }
 }
 
-function transferHost(nickname) {
+export function transferHost(nickname) {
     if (!socket) {
         console.error("Сокет не подключен")
         return
@@ -692,5 +510,3 @@ function transferHost(nickname) {
         }),
     )
 }
-
-export { connectWebSocket, transferHost }

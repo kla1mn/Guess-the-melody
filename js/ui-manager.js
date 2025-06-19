@@ -23,7 +23,7 @@ import {
 import { connectWebSocket } from "./websocket-manager.js"
 import { renderCategories } from "./ui-renderer.js"
 
-function showWaiting() {
+export function showWaiting() {
     console.log("Showing waiting screen with code:", currentCode, "nick:", currentNick, "isHost:", isHost)
 
     initScreen.classList.add("hidden")
@@ -43,7 +43,7 @@ function showWaiting() {
     connectWebSocket()
 }
 
-function showGame(categories) {
+export function showGame(categories) {
     console.log("Showing game screen with categories:", categories)
     setGameStarted(true)
     setGameCategories(categories)
@@ -67,7 +67,7 @@ function showGame(categories) {
     connectWebSocket()
 }
 
-async function addPlaylistLink(link) {
+export async function addPlaylistLink(link) {
     if (!link) {
         return alert("Введите ссылку")
     }
@@ -106,7 +106,7 @@ async function addPlaylistLink(link) {
     }
 }
 
-async function createRoom(nickname) {
+export async function createRoom(nickname) {
     if (!nickname) return alert("Введите никнейм")
 
     try {
@@ -123,7 +123,7 @@ async function createRoom(nickname) {
     }
 }
 
-async function joinRoom(nickname, code) {
+export async function joinRoom(nickname, code) {
     if (!nickname && !code) {
         return alert("Введите ник и код комнаты")
     } else if (!nickname) {
@@ -154,7 +154,7 @@ async function joinRoom(nickname, code) {
     }
 }
 
-function startGame(socket) {
+export function startGame(socket) {
     if (!socket) return
 
     console.log("Sending start_game request")
@@ -165,5 +165,3 @@ function startGame(socket) {
         }),
     )
 }
-
-export { showWaiting, showGame, addPlaylistLink, createRoom, joinRoom, startGame }

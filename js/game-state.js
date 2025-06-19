@@ -1,27 +1,27 @@
 // Game state variables
-let socket = null
-let currentNick = ""
-let currentCode = ""
-let isHost = false
-let linkAdded = false
-let gameStarted = false
-let gameCategories = null
+export let socket = null
+export let currentNick = ""
+export let currentCode = ""
+export let isHost = false
+export let linkAdded = false
+export let gameStarted = false
+export let gameCategories = null
 
-let currentMelody = null
-let choosingPlayerId = null
-let currentAnswer = null
-let playersScores = {}
-let playersAnswered = []
-let currentAudioPlayer = null
-let lastAnsweringPlayer = null
+export let currentMelody = null
+export let choosingPlayerId = null
+export let currentAnswer = null
+export let playersScores = {}
+export let playersAnswered = []
+export let currentAudioPlayer = null
+export let lastAnsweringPlayer = null
 
-let playerIdToNickname = {}
-let playerNicknameToId = {}
+export let playerIdToNickname = {}
+export let playerNicknameToId = {}
 
-let currentPlayerId = null
+export let currentPlayerId = null
 
 // Load saved state from localStorage
-function loadSavedState() {
+export function loadSavedState() {
     const savedCode = localStorage.getItem("guessthemelody_code")
     const savedNick = localStorage.getItem("guessthemelody_nick")
     const savedIsHost = localStorage.getItem("guessthemelody_isHost")
@@ -112,7 +112,7 @@ function loadSavedState() {
     return false
 }
 
-function saveState() {
+export function saveState() {
     localStorage.setItem("guessthemelody_code", currentCode)
     localStorage.setItem("guessthemelody_nick", currentNick)
     localStorage.setItem("guessthemelody_isHost", isHost ? "1" : "0")
@@ -161,7 +161,7 @@ function saveState() {
     })
 }
 
-function clearState() {
+export function clearState() {
     localStorage.removeItem("guessthemelody_code")
     localStorage.removeItem("guessthemelody_nick")
     localStorage.removeItem("guessthemelody_isHost")
@@ -177,7 +177,7 @@ function clearState() {
     console.log("Cleared saved state from localStorage")
 }
 
-function isChoosingPlayer() {
+export function isChoosingPlayer() {
     console.log("Checking if current player is choosing:", {
         currentNick,
         currentPlayerId: currentPlayerId,
@@ -193,7 +193,7 @@ function isChoosingPlayer() {
     return Number(currentPlayerId) === Number(choosingPlayerId)
 }
 
-function getNicknameById(id) {
+export function getNicknameById(id) {
     if (id === null || id === undefined) return "Unknown Player"
 
     const numericId = Number(id)
@@ -207,39 +207,42 @@ function getNicknameById(id) {
     return "Unknown Player"
 }
 
-function hasPlayerAnswered() {
+export function hasPlayerAnswered() {
     return playersAnswered.includes(currentNick)
 }
 
-function resetAnsweredPlayers() {
+export function resetAnsweredPlayers() {
     playersAnswered = []
 }
 
-function addPlayerToAnswered(nickname) {
+export function addPlayerToAnswered(nickname) {
     if (!playersAnswered.includes(nickname)) {
         playersAnswered.push(nickname)
     }
 }
 
-function setPlayerScore(nickname, points) {
+export function setPlayerScore(nickname, points) {
     playersScores[nickname] = points
     saveState()
 }
 
-function setAllPlayersScores(scores) {
+export function setAllPlayersScores(scores) {
     playersScores = { ...scores }
     saveState()
 }
 
-function getSortedPlayersByScore() {
+export function getSortedPlayersByScore() {
     const filteredScores = { ...playersScores }
 
     return Object.entries(filteredScores)
+        .filter(
+            ([nickname, score]) => nickname && nickname !== "null" && nickname !== "undefined" && nickname.trim() !== "",
+        )
         .map(([nickname, score]) => ({ nickname, score }))
         .sort((a, b) => b.score - a.score)
 }
 
-function updatePlayerMappings(players) {
+export function updatePlayerMappings(players) {
     if (!players || !Array.isArray(players)) {
         console.warn("Invalid players data for mapping:", players)
         return
@@ -263,7 +266,7 @@ function updatePlayerMappings(players) {
     logPlayerMappings()
 }
 
-function markMelodyAsGuessed(categoryName, points) {
+export function markMelodyAsGuessed(categoryName, points) {
     if (!gameCategories) return
 
     for (const category of gameCategories) {
@@ -283,7 +286,7 @@ function markMelodyAsGuessed(categoryName, points) {
     checkAllMelodiesGuessed()
 }
 
-function checkAllMelodiesGuessed() {
+export function checkAllMelodiesGuessed() {
     if (!gameCategories) return false
 
     let allGuessed = true
@@ -308,53 +311,18 @@ function checkAllMelodiesGuessed() {
     return allGuessed && totalMelodies > 0
 }
 
-function showGameOverAfterDelay() {
+export function showGameOverAfterDelay() {
     import("./ui-renderer.js").then(({ showGameOverScreen }) => {
         showGameOverScreen()
     })
 }
 
-function logPlayerMappings() {
+export function logPlayerMappings() {
     console.log("Current player ID to nickname mappings:", playerIdToNickname)
     console.log("Current player nickname to ID mappings:", playerNicknameToId)
 }
 
 import { showWaiting, showGame } from "./ui-manager.js"
-
-export {
-    socket,
-    currentNick,
-    currentCode,
-    isHost,
-    linkAdded,
-    gameStarted,
-    gameCategories,
-    currentMelody,
-    choosingPlayerId,
-    currentAnswer,
-    playersScores,
-    currentAudioPlayer,
-    playerIdToNickname,
-    playerNicknameToId,
-    currentPlayerId,
-    lastAnsweringPlayer,
-    loadSavedState,
-    saveState,
-    clearState,
-    isChoosingPlayer,
-    getNicknameById,
-    hasPlayerAnswered,
-    resetAnsweredPlayers,
-    addPlayerToAnswered,
-    setPlayerScore,
-    setAllPlayersScores,
-    getSortedPlayersByScore,
-    updatePlayerMappings,
-    markMelodyAsGuessed,
-    checkAllMelodiesGuessed,
-    showGameOverAfterDelay,
-    logPlayerMappings,
-}
 
 export function setSocket(newSocket) {
     socket = newSocket
